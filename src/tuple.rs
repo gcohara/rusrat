@@ -1,65 +1,85 @@
 use std::ops::{Add, Mul, Sub};
 
-#[derive(Debug)]
-struct Tuple {
+// This struct is used to represent both points and vectors.
+// Vectors will have w == 0.0, while tuples will have w == 1.0.
+// All other values of w are invalid, and indicate a problem.
+#[derive(Debug, Copy, Clone)]
+pub struct Tuple {
     x: f64,
     y: f64,
     z: f64,
     w: f64,
 }
 
+// We don't require floating point numbers to be exactly equal - just that they
+// are very close (i.e within epsilon).
 fn equal(x: f64, y: f64) -> bool {
-    const EPSILON: f64 = 0.001;
+    const EPSILON: f64 = 0.0001;
     (x - y).abs() <= EPSILON
 }
 
 impl Tuple {
-    fn new(x: f64, y: f64, z: f64, w: f64) -> Tuple {
+    // Create a new tuple
+    pub fn new(x: f64, y: f64, z: f64, w: f64) -> Tuple {
         Tuple { x, y, z, w }
     }
-
-    fn point_new(x: f64, y: f64, z: f64) -> Tuple {
+    // Create a new point (where w = 1)
+    pub fn point_new(x: f64, y: f64, z: f64) -> Tuple {
         Tuple::new(x, y, z, 1.0)
     }
-
-    fn vector_new(x: f64, y: f64, z: f64) -> Tuple {
+    // Create a new vector (where w = 0)
+    pub fn vector_new(x: f64, y: f64, z: f64) -> Tuple {
         Tuple::new(x, y, z, 0.0)
     }
-
-    fn is_point(&self) -> bool {
+    // Check if the tuple represents a point
+    pub fn is_point(&self) -> bool {
         equal(self.w, 1.0)
     }
-
-    fn is_vector(&self) -> bool {
+    // Check if the tuple represents a vector
+    pub fn is_vector(&self) -> bool {
         equal(self.w, 0.0)
     }
-
+    // Get the negation of a tuple, including of its w component.
+    // This is only used internally, to implement the Sub trait (i.e overload '-')
     fn negate(&self) -> Tuple {
         Tuple::new(-self.x, -self.y, -self.z, -self.w)
     }
-
-    fn magnitude(&self) -> f64 {
+    // Get the magnitude of a tuple.
+    pub fn magnitude(&self) -> f64 {
         (self.x.powi(2) + self.y.powi(2) + self.z.powi(2)).sqrt()
     }
-
-    fn normalise(&self) -> Tuple {
+    // Normalise a tuple so that its magnitude == 1.
+    pub fn normalise(&self) -> Tuple {
         let mag = self.magnitude();
         Tuple::vector_new(self.x / mag, self.y / mag, self.z / mag)
     }
-
-    fn dot(&self, other: &Tuple) -> f64 {
+    // Get the dot product of two vectors. Panics if given a point.
+    pub fn dot(&self, other: &Tuple) -> f64 {
+        assert!(
+            self.is_vector() && other.is_vector(),
+            "Attempted to take the dot product of a point/points!"
+        );
         (self.x * other.x) + (self.y * other.y) + (self.z * other.z) + (self.w * other.w)
     }
-
-    fn cross(&self, other: &Tuple) -> Tuple {
+    // Get the cross product of two vectors. Panics if given point.
+    pub fn cross(&self, other: &Tuple) -> Tuple {
+        assert!(
+            self.is_vector() && other.is_vector(),
+            "Attempted to take the cross product of a point/points!"
+        );
         Tuple::vector_new(
             self.y * other.z - self.z * other.y,
             self.z * other.x - self.x * other.z,
             self.x * other.y - self.y * other.x,
         )
     }
+    // Get a vector copy of the tuple's values. Used for iterators.
+    pub fn vector_copy(&self) -> Vec<f64> {
+        vec![self.x, self.y, self.z, self.w]
+    }
 }
 
+// This trait allows us to use the == operator for tuples.
 impl PartialEq for Tuple {
     fn eq(&self, other: &Self) -> bool {
         equal(self.w, other.w)
@@ -69,6 +89,7 @@ impl PartialEq for Tuple {
     }
 }
 
+// This trait overloads the + operator for tuples.
 impl Add for Tuple {
     type Output = Self;
     fn add(self, other: Self) -> Self {
@@ -81,6 +102,7 @@ impl Add for Tuple {
     }
 }
 
+// This trait overloads the '-' operator for tuples.
 impl Sub for Tuple {
     type Output = Self;
     fn sub(self, other: Self) -> Self {
@@ -93,6 +115,19 @@ impl Sub for Tuple {
     }
 }
 
+impl Mul<&Tuple> for f64 {
+    type Output = Tuple;
+    fn mul(self, other: &Tuple) -> Tuple {
+        Tuple::new(
+            self * other.x,
+            self * other.y,
+            self * other.z,
+            self * other.w,
+        )
+    }
+}
+
+// This trait allows us to multiply a tuple by an f64 (with the f64 on the right)
 impl Mul<f64> for Tuple {
     type Output = Self;
     fn mul(self, other: f64) -> Self {
