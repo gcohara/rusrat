@@ -3,14 +3,14 @@ use std::io::Write;
 use std::ops::{Add, Mul, Sub};
 
 #[derive(Debug, Clone, Copy)]
-struct Colour {
+pub struct Colour {
     red: f64,
     green: f64,
     blue: f64,
 }
 
 impl Colour {
-    fn new(red: f64, green: f64, blue: f64) -> Colour {
+    pub fn new(red: f64, green: f64, blue: f64) -> Colour {
         Colour { red, green, blue }
     }
 
@@ -84,15 +84,14 @@ impl Mul for Colour {
         )
     }
 }
-
-struct Canvas {
+pub struct Canvas {
     width: usize,
     height: usize,
     pixels: Vec<Vec<Colour>>,
 }
 
 impl Canvas {
-    fn new(width: usize, height: usize) -> Canvas {
+    pub fn new(width: usize, height: usize) -> Canvas {
         let mut cnv = Canvas {
             width,
             height,
@@ -111,11 +110,11 @@ impl Canvas {
         &self.pixels[i][j]
     }
 
-    fn write_pixel(&mut self, index: (usize, usize), colour: Colour) {
+    pub fn write_pixel(&mut self, index: (usize, usize), colour: Colour) {
         self.pixels[index.0][index.1] = colour;
     }
     // Change this to output a result, test it returns correctly
-    fn write_out_as_ppm_file(&self) {
+    pub fn write_out_as_ppm_file(&self) {
         let mut outfile = File::create("output.ppm").unwrap();
         outfile.write_all(self.ppm_header().as_bytes()).unwrap();
         outfile.write_all(self.ppm_pixel_data().as_bytes()).unwrap();

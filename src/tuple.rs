@@ -41,7 +41,7 @@ impl Tuple {
     }
     // Get the negation of a tuple, including of its w component.
     // This is only used internally, to implement the Sub trait (i.e overload '-')
-    fn negate(&self) -> Tuple {
+    pub fn negate(&self) -> Tuple {
         Tuple::new(-self.x, -self.y, -self.z, -self.w)
     }
     // Get the magnitude of a tuple.
@@ -76,6 +76,14 @@ impl Tuple {
     // Get a vector copy of the tuple's values. Used for iterators.
     pub fn vector_copy(&self) -> Vec<f64> {
         vec![self.x, self.y, self.z, self.w]
+    }
+
+    pub fn reflect(&self, other: &Tuple) -> Tuple {
+        assert!(
+            self.is_vector() && other.is_vector(),
+            "Attempted to take the vector reflection of a point/points!"
+        );
+        *other - (2.0 * self * other.dot(self))
     }
 }
 
@@ -252,5 +260,20 @@ mod tests {
         let a = Tuple::vector_new(1.0, 2.0, 3.0);
         let b = Tuple::vector_new(2.0, 3.0, 4.0);
         assert_eq!(a.cross(&b), b.cross(&a).negate());
+    }
+
+    #[test]
+    fn reflecting_a_vector_about_normal() {
+        let v = Tuple::vector_new(1.0, -1.0, 0.0);
+        let n = Tuple::vector_new(0.0, 1.0, 0.0);
+        assert_eq!(n.reflect(&v), Tuple::vector_new(1.0, 1.0, 0.0));
+    }
+
+    #[test]
+    fn reflecting_a_vector_about_normal_again() {
+        use std::f64::consts::FRAC_1_SQRT_2;
+        let v = Tuple::vector_new(0.0, -1.0, 0.0);
+        let n = Tuple::vector_new(FRAC_1_SQRT_2, FRAC_1_SQRT_2, 0.0);
+        assert_eq!(n.reflect(&v), Tuple::vector_new(1.0, 0.0, 0.0));
     }
 }
