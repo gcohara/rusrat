@@ -92,26 +92,19 @@ pub struct Canvas {
 
 impl Canvas {
     pub fn new(width: usize, height: usize) -> Canvas {
-        let mut cnv = Canvas {
+        Canvas {
             width,
             height,
-            pixels: Vec::new(),
-        };
-        for i in 0..width {
-            cnv.pixels.push(Vec::new());
-            for _j in 0..height {
-                cnv.pixels[i].push(Colour::new(0.0, 0.0, 0.0));
-            }
+            pixels: vec![vec![Colour::new(0.0, 0.0, 0.0); width]; height],
         }
-        cnv
     }
 
-    fn pixel_at(&self, i: usize, j: usize) -> &Colour {
-        &self.pixels[i][j]
+    pub fn pixel_at(&self, x: usize, y: usize) -> &Colour {
+        &self.pixels[y][x]
     }
 
-    pub fn write_pixel(&mut self, index: (usize, usize), colour: Colour) {
-        self.pixels[index.0][index.1] = colour;
+    pub fn write_pixel(&mut self, (x, y): (usize, usize), colour: Colour) {
+        self.pixels[y][x] = colour;
     }
     // Change this to output a result, test it returns correctly
     pub fn write_out_as_ppm_file(&self) {

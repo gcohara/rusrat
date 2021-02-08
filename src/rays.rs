@@ -5,6 +5,7 @@ use crate::world::World;
 use std::cmp::Ordering;
 use std::f64::EPSILON;
 
+#[derive(Debug)]
 pub struct Ray {
     pub origin: Tuple,
     pub direction: Tuple,
@@ -28,8 +29,8 @@ impl<'a, T: Shape> Intersection<'a, T> {
             }
         }
     }
-    
-    fn new(t: f64, object: &'a T) -> Intersection<'a, T> {
+
+    pub fn new(t: f64, object: &'a T) -> Intersection<'a, T> {
         Intersection { t, object }
     }
 
@@ -53,34 +54,16 @@ impl Ray {
         self.origin + (t * &self.direction)
     }
 
-    // I don't like this function
-    pub fn intersects<'a>(&self, s: &'a Sphere) -> Vec<Intersection<'a, Sphere>> {
-        let transformed_ray = self.transform(&s.transform.inverse());
-        let sphere_to_ray = transformed_ray.origin - Tuple::point_new(0.0, 0.0, 0.0);
-        let a = transformed_ray.direction.dot(&transformed_ray.direction);
-        let b = 2.0 * transformed_ray.direction.dot(&sphere_to_ray);
-        let c = sphere_to_ray.dot(&sphere_to_ray) - 1.0;
-        let discriminant = b.powi(2) - (4.0 * a * c);
-        match discriminant < 0.0 {
-            true => Vec::new(),
-            false => {
-                let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
-                let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
-                vec![Intersection::new(t1, s), Intersection::new(t2, s)]
-            }
-        }
-    }
-
-    pub fn intersects_world<'a>(&self, w: &'a World) -> Vec<Intersection<'a, Sphere>> {
+    pub fn intersects_world<'a>(&self, w: &'a World) -> Vec<Intersection<'a, Shape>> {
         let mut out = Vec::new();
         for shape in w.objects.iter() {
-            out.append(&mut self.intersects(&shape))
+            out.append(&mut shape.intersects(&self))
         }
         out.sort_by(|i, j| i.partial_cmp(j).unwrap());
         out
     }
 
-    fn transform(&self, m: &Matrix<f64, 4, 4>) -> Ray {
+    pub fn transform(&self, m: &Matrix<f64, 4, 4>) -> Ray {
         Ray {
             origin: m * &self.origin,
             direction: m * &self.direction,
@@ -109,7 +92,7 @@ mod tests {
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
         let s = Sphere::default();
-        let xs = r.intersects(&s);
+        let xs = s.intersects(&r);
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, 4.0);
         assert_eq!(xs[1].t, 6.0);
@@ -122,7 +105,7 @@ mod tests {
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
         let s = Sphere::default();
-        let xs = r.intersects(&s);
+        let xs = s.intersects(&r);
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, 5.0);
         assert_eq!(xs[1].t, 5.0);
@@ -135,7 +118,7 @@ mod tests {
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
         let s = Sphere::default();
-        let xs = r.intersects(&s);
+        let xs = s.intersects(&r);
         assert_eq!(xs.len(), 0);
     }
 
@@ -146,7 +129,7 @@ mod tests {
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
         let s = Sphere::default();
-        let xs = r.intersects(&s);
+        let xs = s.intersects(&r);
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, -1.0);
         assert_eq!(xs[1].t, 1.0);
@@ -159,7 +142,7 @@ mod tests {
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
         let s = Sphere::default();
-        let xs = r.intersects(&s);
+        let xs = s.intersects(&r);
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, -6.0);
         assert_eq!(xs[1].t, -4.0);
@@ -172,7 +155,7 @@ mod tests {
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
         let s = Sphere::default();
-        let xs = r.intersects(&s);
+        let xs = s.intersects(&r);
         assert_eq!(xs[0].object, &s);
         assert_eq!(xs[1].object, &s);
     }
@@ -234,7 +217,7 @@ mod tests {
     #[test]
     fn changing_a_spheres_transformation() {
         let mut s = Sphere::default();
-        s.set_transform(Matrix::translation(2.0, 3.0, 4.0));
+        s.transform = Matrix::translation(2.0, 3.0, 4.0);
         assert_eq!(s.transform, Matrix::translation(2.0, 3.0, 4.0));
     }
 
@@ -245,8 +228,8 @@ mod tests {
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
         let mut s = Sphere::default();
-        s.set_transform(Matrix::scaling(2.0, 2.0, 2.0));
-        let xs = r.intersects(&s);
+        s.transform = Matrix::scaling(2.0, 2.0, 2.0);
+        let xs = s.intersects(&r);
         assert_eq!(xs[0].t, 3.0);
         assert_eq!(xs[1].t, 7.0);
     }
@@ -258,8 +241,8 @@ mod tests {
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
         let mut s = Sphere::default();
-        s.set_transform(Matrix::translation(5.0, 0.0, 0.0));
-        let xs = r.intersects(&s);
+        s.transform = Matrix::translation(5.0, 0.0, 0.0);
+        let xs = s.intersects(&r);
         assert_eq!(xs.len(), 0);
     }
 }

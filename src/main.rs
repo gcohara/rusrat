@@ -8,71 +8,76 @@ mod shapes;
 mod tuple;
 mod world;
 
-use crate::canvas::{Canvas, Colour};
-use crate::lighting::{PointLight};
-use crate::matrices::Matrix;
-use crate::rays::{Intersection, Ray};
-use crate::shapes::{Material, Sphere};
-use crate::tuple::Tuple;
+use canvas::Colour;
+use lighting::PointLight;
+use matrices::Matrix;
+use shapes::{Material, Plane, Shape, Sphere};
+use std::f64::consts::PI;
+use tuple::Tuple;
+use world::{Camera, World};
 
 fn main() {
-    let ray_origin = Tuple::point_new(0.0, 0.0, -5.0);
-    let wall_z = 10.0;
-    let wall_size = 8.0;
-    let canvas_size = 100;
-    let pixel_size = wall_size / canvas_size as f64;
-    let half = wall_size / 2.0;
-    let mut canvas = Canvas::new(canvas_size, canvas_size);
-    
-    // sphere one
-    let t = Matrix::translation(1.4, -1.0, 0.0).scale(0.3, 0.3, 0.3);
-    let mut m = Material::default();
-    m.colour = Colour::new(1.0, 0.2, 1.0);
-    let s = Sphere::new(m, t);
-
-    // sphere two
-    let t = Matrix::translation(1.4, 1.0, 0.0).scale(0.3, 0.3, 0.3);
-    let mut m = Material::default();
-    m.colour = Colour::new(1.0, 0.2, 1.0);
-    let  s2 = Sphere::new(m, t);
-
-
-    // sphere three
-    let t = Matrix::scaling(0.9, 0.3, 0.7).translate(-1.28, 0.0, 0.0);
-    let mut m = Material::default();
-    m.colour = Colour::new(1.0, 0.2, 1.0);
-    let  s3 = Sphere::new(m, t);
-
-
+    let floor = Plane::new(
+        Material {
+            colour: Colour::new(1.0, 0.9, 0.9),
+            specular: 0.0,
+            ..Default::default()
+        },
+        Matrix::identity(),
+    );
+    let left_wall = Sphere::new(
+        Material {
+            colour: Colour::new(1.0, 0.9, 0.9),
+            specular: 0.0,
+            ..Default::default()
+        },
+        Matrix::scaling(10.0, 0.01, 10.0)
+            .rotate_x(PI / 2.0)
+            .rotate_y(-PI / 4.0)
+            .translate(0.0, 0.0, 5.0),
+    );
+    let right_wall = Sphere::new(
+        Material {
+            colour: Colour::new(1.0, 0.9, 0.9),
+            specular: 0.0,
+            ..Default::default()
+        },
+        Matrix::scaling(10.0, 0.01, 10.0)
+            .rotate_x(PI / 2.0)
+            .rotate_y(PI / 4.0)
+            .translate(0.0, 0.0, 5.0),
+    );
+    let sphere = Sphere::new(
+        Material {
+            colour: Colour::new(0.1, 1.0, 0.5),
+            diffuse: 0.7,
+            specular: 0.3,
+            ..Default::default()
+        },
+        Matrix::translation(-0.5, 1.0, 0.5),
+    );
     let light = PointLight::new(
         Colour::new(1.0, 1.0, 1.0),
-        Tuple::point_new(0.0, 10.0, -15.0),
+        Tuple::point_new(-10.0, 10.0, -10.0),
     );
-
-    let spheres = vec![s3, s2, s];
-    for x in 0..canvas_size {
-        let world_x = -half + pixel_size * x as f64;
-        for y in 0..canvas_size {
-            let world_y = half - pixel_size * y as f64;
-            let position = Tuple::point_new(world_x, world_y, wall_z);
-            let r = Ray::new(ray_origin, (position - ray_origin).normalise());
-            for s in spheres.iter() {
-                let intersects = r.intersects(&s);
-                if let Some(hit) = Intersection::hit(intersects) {
-                    let hit_point = r.position(hit.t);
-                    let hit_normal = s.normal_at(&hit_point);
-                    let eye = r.direction.negate();
-                    let clr = lighting::calculate_lighting(
-                        &hit.object.material,
-                        &light,
-                        &hit_point,
-                        &eye,
-                        &hit_normal,
-                    );
-                    canvas.write_pixel((x, y), clr);
-                }
-            }
-        }
-    }
-    canvas.write_out_as_ppm_file();
+    let mut world = World::new();
+    world.objects = vec![
+        shapes::ShapeType::Sphere(right_wall),
+        shapes::ShapeType::Sphere(left_wall),
+        shapes::ShapeType::Plane(floor),
+        shapes::ShapeType::Sphere(sphere),
+    ];
+    world.lights = vec![light];
+    let mut cam = Camera::new(
+        80,
+        40,
+        PI / 3.0,
+        world::view_transform(
+            &Tuple::point_new(0.0, 1.5, -5.0),
+            &Tuple::point_new(0.0, 1.0, 0.0),
+            &Tuple::vector_new(0.0, 1.0, 0.0),
+        ),
+    );
+    let canv = world::render(&mut cam, &world);
+    canv.write_out_as_ppm_file();
 }

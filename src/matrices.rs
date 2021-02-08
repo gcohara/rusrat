@@ -18,6 +18,7 @@ impl<const SIZE: usize> Matrix<f64, SIZE, SIZE> {
             data: values.clone(),
         }
     }
+    
     pub fn new() -> Self {
         Matrix::from_array(&[[f64::default(); SIZE]; SIZE])
     }
@@ -307,6 +308,12 @@ impl<const ROWS: usize, const COLUMNS: usize> PartialEq for Matrix<f64, ROWS, CO
             None => true,
             Some(_) => false,
         }
+    }
+}
+
+impl<const SIZE: usize> Default for Matrix<f64, SIZE, SIZE> {
+    fn default() -> Matrix<f64, SIZE, SIZE> {
+        Matrix::identity()
     }
 }
 
