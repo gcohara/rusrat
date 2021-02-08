@@ -122,6 +122,17 @@ impl Sub for Tuple {
         }
     }
 }
+impl Sub for &Tuple {
+    type Output = Tuple;
+    fn sub(self, other: Self) -> Tuple {
+        Tuple {
+            x: self.x - other.x,
+            y: self.y - other.y,
+            z: self.z - other.z,
+            w: self.w - other.w,
+        }
+    }
+}
 
 impl Mul<&Tuple> for f64 {
     type Output = Tuple;

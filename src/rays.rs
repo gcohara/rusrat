@@ -1,5 +1,5 @@
 use crate::matrices::Matrix;
-use crate::shapes::{Shape, Sphere};
+use crate::shapes::{plane, sphere, Shape};
 use crate::tuple::Tuple;
 use crate::world::World;
 use std::cmp::Ordering;
@@ -12,12 +12,12 @@ pub struct Ray {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Intersection<'a, T: Shape> {
+pub struct Intersection<'a> {
     pub t: f64,
-    pub object: &'a T,
+    pub object: &'a Shape,
 }
 
-impl<'a, T: Shape> Intersection<'a, T> {
+impl<'a> Intersection<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         let eq = (self.t - other.t).abs() < EPSILON;
         if eq {
@@ -30,11 +30,11 @@ impl<'a, T: Shape> Intersection<'a, T> {
         }
     }
 
-    pub fn new(t: f64, object: &'a T) -> Intersection<'a, T> {
+    pub fn new(t: f64, object: &'a Shape) -> Intersection<'a> {
         Intersection { t, object }
     }
 
-    pub fn hit(intersections: Vec<Intersection<'a, T>>) -> Option<Intersection<'a, T>> {
+    pub fn hit(intersections: Vec<Intersection<'a>>) -> Option<Intersection<'a>> {
         intersections
             .into_iter()
             .filter(|x| x.t >= 0.0)
@@ -54,7 +54,7 @@ impl Ray {
         self.origin + (t * &self.direction)
     }
 
-    pub fn intersects_world<'a>(&self, w: &'a World) -> Vec<Intersection<'a, Shape>> {
+    pub fn intersects_world<'a>(&self, w: &'a World) -> Vec<Intersection<'a>> {
         let mut out = Vec::new();
         for shape in w.objects.iter() {
             out.append(&mut shape.intersects(&self))
@@ -91,7 +91,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, -5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let xs = s.intersects(&r);
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, 4.0);
@@ -104,7 +104,7 @@ mod tests {
             Tuple::point_new(0.0, 1.0, -5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let xs = s.intersects(&r);
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, 5.0);
@@ -117,7 +117,7 @@ mod tests {
             Tuple::point_new(0.0, 2.0, -5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let xs = s.intersects(&r);
         assert_eq!(xs.len(), 0);
     }
@@ -128,7 +128,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, 0.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let xs = s.intersects(&r);
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, -1.0);
@@ -141,7 +141,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, 5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let xs = s.intersects(&r);
         assert_eq!(xs.len(), 2);
         assert_eq!(xs[0].t, -6.0);
@@ -154,7 +154,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, 5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let xs = s.intersects(&r);
         assert_eq!(xs[0].object, &s);
         assert_eq!(xs[1].object, &s);
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn hit_point_when_t_both_positive() {
-        let s = Sphere::default();
+        let s = sphere::default();
         let i1 = Intersection::new(1.0, &s);
         let i2 = Intersection::new(2.0, &s);
         let xs = vec![i1, i2];
@@ -172,7 +172,7 @@ mod tests {
 
     #[test]
     fn hit_point_when_one_t_negative() {
-        let s = Sphere::default();
+        let s = sphere::default();
         let i1 = Intersection::new(-1.0, &s);
         let i2 = Intersection::new(1.0, &s);
         let xs = vec![i1, i2];
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn hit_point_when_t_both_negative() {
-        let s = Sphere::default();
+        let s = sphere::default();
         let i1 = Intersection::new(-1.0, &s);
         let i2 = Intersection::new(-2.0, &s);
         let xs = vec![i1, i2];
@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn changing_a_spheres_transformation() {
-        let mut s = Sphere::default();
+        let mut s = sphere::default();
         s.transform = Matrix::translation(2.0, 3.0, 4.0);
         assert_eq!(s.transform, Matrix::translation(2.0, 3.0, 4.0));
     }
@@ -227,7 +227,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, -5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let mut s = Sphere::default();
+        let mut s = sphere::default();
         s.transform = Matrix::scaling(2.0, 2.0, 2.0);
         let xs = s.intersects(&r);
         assert_eq!(xs[0].t, 3.0);
@@ -240,7 +240,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, -5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let mut s = Sphere::default();
+        let mut s = sphere::default();
         s.transform = Matrix::translation(5.0, 0.0, 0.0);
         let xs = s.intersects(&r);
         assert_eq!(xs.len(), 0);

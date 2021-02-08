@@ -2,12 +2,12 @@ use crate::canvas::{Canvas, Colour};
 use crate::lighting::{colour_at, PointLight};
 use crate::matrices::Matrix;
 use crate::rays::Ray;
-use crate::shapes::{Material, Sphere, Shape, ShapeType};
+use crate::shapes::{plane, sphere, Material, Shape};
 use crate::tuple::Tuple;
 use itertools::iproduct;
 
 pub struct World {
-    pub objects: Vec<ShapeType>,
+    pub objects: Vec<Shape>,
     pub lights: Vec<PointLight>,
 }
 
@@ -104,23 +104,27 @@ impl World {
 
 impl Default for World {
     fn default() -> World {
-        let s1 = Sphere::new(
-            Material {
+        let s1 = Shape {
+            material: Material {
                 colour: Colour::new(0.8, 1.0, 0.6),
                 diffuse: 0.7,
                 specular: 0.2,
                 ..Material::default()
             },
-            Matrix::identity(),
-        );
-        let s2 = Sphere::new(Material::default(), Matrix::scaling(0.5, 0.5, 0.5));
+            transform: Matrix::identity(),
+            ..sphere::default()
+        };
+        let s2 = Shape {
+            transform: Matrix::scaling(0.5, 0.5, 0.5),
+            ..sphere::default()
+        };
         let light = PointLight::new(
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(-10.0, 10.0, -10.0),
         );
 
         World {
-            objects: vec![ShapeType::Sphere(s1), ShapeType::Sphere(s2)],
+            objects: vec![s1, s2],
             lights: vec![light],
         }
     }

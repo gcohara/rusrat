@@ -1,6 +1,6 @@
 use crate::canvas::Colour;
 use crate::rays::{Intersection, Ray};
-use crate::shapes::{Material, Sphere, Shape};
+use crate::shapes::{Material, Shape};
 use crate::tuple::Tuple;
 use crate::world::World;
 
@@ -10,7 +10,7 @@ pub struct PointLight {
 }
 
 pub struct PreComputation<'a> {
-    object: &'a Sphere,
+    object: &'a Shape,
     point: Tuple,
     eye_vec: Tuple,
     // reflect_vec: Tuple,
@@ -28,7 +28,7 @@ impl PointLight {
     }
 }
 
-pub fn prepare_computations<'a>(i: &Intersection<'a, Sphere>, r: &Ray) -> PreComputation<'a> {
+pub fn prepare_computations<'a>(i: &Intersection<'a>, r: &Ray) -> PreComputation<'a> {
     let p = r.position(i.t);
     let mut out = PreComputation {
         object: i.object,
@@ -36,7 +36,7 @@ pub fn prepare_computations<'a>(i: &Intersection<'a, Sphere>, r: &Ray) -> PreCom
         normal: i.object.normal_at(&p),
         point: p,
         eye_vec: r.direction.negate(),
-        // reflect_vec: 
+        // reflect_vec:
         inside: false,
     };
     if out.normal.dot(&out.eye_vec) < 0.0 {
@@ -129,6 +129,7 @@ fn is_shadowed(w: &World, p: &Tuple) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shapes::{plane, sphere};
 
     #[test]
     fn eye_between_light_and_surface() {
@@ -205,7 +206,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, -5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let i = Intersection::new(4.0, &s);
         let comps = prepare_computations(&i, &r);
         assert_eq!(comps.t, i.t);
@@ -221,7 +222,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, -5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let i = Intersection::new(4.0, &s);
         let comps = prepare_computations(&i, &r);
         assert!(!comps.inside);
@@ -233,7 +234,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, 0.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let s = Sphere::default();
+        let s = sphere::default();
         let i = Intersection::new(4.0, &s);
         let comps = prepare_computations(&i, &r);
         assert!(comps.inside);
