@@ -13,10 +13,11 @@ pub struct PreComputation<'a> {
     object: &'a Shape,
     point: Tuple,
     eye_vec: Tuple,
-    // reflect_vec: Tuple,
+    reflect_vec: Tuple,
     normal: Tuple,
     t: f64,
     inside: bool,
+    over_point: Tuple,
 }
 
 impl PointLight {
@@ -29,6 +30,7 @@ impl PointLight {
 }
 
 pub fn prepare_computations<'a>(i: &Intersection<'a>, r: &Ray) -> PreComputation<'a> {
+    const EPSILON: f64 = 0.0000001;
     let p = r.position(i.t);
     let mut out = PreComputation {
         object: i.object,
@@ -36,13 +38,17 @@ pub fn prepare_computations<'a>(i: &Intersection<'a>, r: &Ray) -> PreComputation
         normal: i.object.normal_at(&p),
         point: p,
         eye_vec: r.direction.negate(),
-        // reflect_vec:
+        reflect_vec: Tuple::vector_new(0.0, 0.0, 0.0),
         inside: false,
+        over_point: Tuple::vector_new(0.0, 0.0, 0.0),
     };
     if out.normal.dot(&out.eye_vec) < 0.0 {
         out.inside = true;
         out.normal = out.normal.negate();
     };
+    // needs to be done after normal is negated (if it is)
+    out.reflect_vec = out.normal.reflect(&r.direction);
+    out.over_point = out.point + (EPSILON * &out.normal);
     out
 }
 
@@ -84,8 +90,7 @@ pub fn calculate_lighting(
     }
 }
 
-fn shade_hit(w: &World, c: &PreComputation) -> Colour {
-    const EPSILON: f64 = 0.0000001;
+fn shade_hit(w: &World, c: &PreComputation, remaining_recursions: usize) -> Colour {
     let mut out = Colour::new(0.0, 0.0, 0.0);
     for light in &w.lights {
         out = out
@@ -96,19 +101,20 @@ fn shade_hit(w: &World, c: &PreComputation) -> Colour {
                 &c.eye_vec,
                 &c.normal,
                 // prevent 'acne'
-                is_shadowed(&w, &(c.point + (EPSILON * &c.normal))),
+                is_shadowed(&w, &c.over_point),
             );
     }
-    out
+    let reflected = reflected_colour(w, c, remaining_recursions);
+    out + reflected
 }
 
-pub fn colour_at(w: &World, r: &Ray) -> Colour {
+pub fn colour_at(w: &World, r: &Ray, remaining_recursions: usize) -> Colour {
     let inters = r.intersects_world(w);
     let hit = Intersection::hit(inters);
     match hit {
         Some(h) => {
             let comps = prepare_computations(&h, r);
-            shade_hit(w, &comps)
+            shade_hit(w, &comps, remaining_recursions)
         }
         None => Colour::new(0.0, 0.0, 0.0),
     }
@@ -126,9 +132,20 @@ fn is_shadowed(w: &World, p: &Tuple) -> bool {
     }
 }
 
+fn reflected_colour(w: &World, c: &PreComputation, remaining_recursions: usize) -> Colour {
+    if remaining_recursions <= 0 || c.object.material.reflectivity == 0.0 {
+        Colour::new(0.0, 0.0, 0.0)
+    } else {
+        let reflected_ray = Ray::new(c.over_point, c.reflect_vec);
+        let colour = colour_at(&w, &reflected_ray, remaining_recursions - 1);
+        colour * c.object.material.reflectivity
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::matrices::Matrix;
     use crate::shapes::{plane, sphere};
 
     #[test]
@@ -250,7 +267,7 @@ mod tests {
         let s = &w.objects[0];
         let i = Intersection::new(4.0, s);
         let comp = prepare_computations(&i, &r);
-        let c = shade_hit(&w, &comp);
+        let c = shade_hit(&w, &comp, 5);
         assert_eq!(c, Colour::new(0.38066, 0.47583, 0.2855));
     }
 
@@ -265,7 +282,7 @@ mod tests {
         let s = &w.objects[1];
         let i = Intersection::new(0.5, s);
         let comp = prepare_computations(&i, &r);
-        let c = shade_hit(&w, &comp);
+        let c = shade_hit(&w, &comp, 5);
         assert_eq!(c, Colour::new(0.90498, 0.90498, 0.90498));
     }
 
@@ -276,7 +293,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, -5.0),
             Tuple::vector_new(0.0, 1.0, 0.0),
         );
-        let c = colour_at(&w, &r);
+        let c = colour_at(&w, &r, 5);
         assert_eq!(c, Colour::new(0.0, 0.0, 0.0));
     }
 
@@ -287,7 +304,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, -5.0),
             Tuple::vector_new(0.0, 0.0, 1.0),
         );
-        let c = colour_at(&w, &r);
+        let c = colour_at(&w, &r, 5);
         assert_eq!(c, Colour::new(0.38066, 0.47583, 0.2855));
     }
 
@@ -303,7 +320,7 @@ mod tests {
             Tuple::point_new(0.0, 0.0, 0.75),
             Tuple::vector_new(0.0, 0.0, -1.0),
         );
-        let c = colour_at(&w, &r);
+        let c = colour_at(&w, &r, 5);
         assert_eq!(c, inner.material.colour);
     }
 
@@ -347,5 +364,136 @@ mod tests {
         let w = World::default();
         let p = Tuple::point_new(-20.0, 20.0, -20.0);
         assert!(!is_shadowed(&w, &p));
+    }
+
+    #[test]
+    fn precomputing_reflection_vector() {
+        use std::f64::consts::SQRT_2;
+        let pln = plane::default();
+        let r = Ray::new(
+            Tuple::point_new(0.0, 1.0, -1.0),
+            Tuple::vector_new(0.0, -SQRT_2 / 2.0, SQRT_2 / 2.0),
+        );
+        let i = Intersection::new(SQRT_2, &pln);
+        let comps = prepare_computations(&i, &r);
+        assert_eq!(
+            comps.reflect_vec,
+            Tuple::vector_new(0.0, SQRT_2 / 2.0, SQRT_2 / 2.0)
+        );
+    }
+
+    #[test]
+    fn reflected_colour_for_nonreflective_material() {
+        let w = World::default();
+        let r = Ray::new(
+            Tuple::point_new(0.0, 0.0, 0.0),
+            Tuple::vector_new(0.0, 0.0, 1.0),
+        );
+        let s = &w.objects[1];
+        let i = Intersection::new(1.0, s);
+        let comps = prepare_computations(&i, &r);
+        let colour = reflected_colour(&w, &comps, 5);
+        assert_eq!(colour, Colour::new(0.0, 0.0, 0.0));
+    }
+
+    #[test]
+    fn reflected_colour_for_reflective_material() {
+        use std::f64::consts::SQRT_2;
+        let mut w = World::default();
+        let pln = Shape {
+            material: Material {
+                reflectivity: 0.5,
+                ..Default::default()
+            },
+            transform: Matrix::translation(00.0, -1.0, 0.0),
+            ..plane::default()
+        };
+        w.objects.push(pln);
+        let r = Ray::new(
+            Tuple::point_new(0.0, 0.0, -3.0),
+            Tuple::vector_new(0.0, -SQRT_2 / 2.0, SQRT_2 / 2.0),
+        );
+        let s = &w.objects[2];
+        let i = Intersection::new(SQRT_2, s);
+        let comps = prepare_computations(&i, &r);
+        let colour = reflected_colour(&w, &comps, 5);
+        assert_eq!(colour, Colour::new(0.19033, 0.23791, 0.14275));
+    }
+
+    #[test]
+    fn shade_hit_with_reflective_material() {
+        use std::f64::consts::SQRT_2;
+        let mut w = World::default();
+        let pln = Shape {
+            material: Material {
+                reflectivity: 0.5,
+                ..Default::default()
+            },
+            transform: Matrix::translation(0.0, -1.0, 0.0),
+            ..plane::default()
+        };
+        w.objects.push(pln);
+        let s = &w.objects[2];
+        let r = Ray::new(
+            Tuple::point_new(0.0, 0.0, -3.0),
+            Tuple::vector_new(0.0, -SQRT_2 / 2.0, SQRT_2 / 2.0),
+        );
+        let i = Intersection::new(SQRT_2, s);
+        let comps = prepare_computations(&i, &r);
+        let colour = shade_hit(&w, &comps, 5);
+        assert_eq!(colour, Colour::new(0.87677, 0.92436, 0.82918));
+    }
+
+    #[test]
+    // could do this by spawning a thread with a small stack size
+    // std::thread::Builder allows this
+    fn colour_at_mutually_recursive_surfaces() {
+        let mut w = World::default();
+        w.objects.push(Shape {
+            material: Material {
+                reflectivity: 1.0,
+                ..Default::default()
+            },
+            transform: Matrix::translation(0.0, -1.0, 0.0),
+            ..plane::default()
+        });
+        w.objects.push(Shape {
+            material: Material {
+                reflectivity: 1.0,
+                ..Default::default()
+            },
+            transform: Matrix::translation(0.0, 1.0, 0.0),
+            ..plane::default()
+        });
+        let r = Ray::new(
+            Tuple::point_new(0.0, 0.0, 0.0),
+            Tuple::vector_new(0.0, 1.0, 0.0),
+        );
+        // in case of infinite recursion, this will eventually panic (which is the test)
+        colour_at(&w, &r, 5);
+    }
+
+    #[test]
+    fn reflected_colour_at_max_recursion() {
+        use std::f64::consts::SQRT_2;
+        let mut w = World::default();
+        let pln = Shape {
+            material: Material {
+                reflectivity: 0.5,
+                ..Default::default()
+            },
+            transform: Matrix::translation(0.0, -1.0, 0.0),
+            ..plane::default()
+        };
+        w.objects.push(pln);
+        let s = &w.objects[2];
+        let r = Ray::new(
+            Tuple::point_new(0.0, 0.0, -3.0),
+            Tuple::vector_new(0.0, -SQRT_2 / 2.0, SQRT_2 / 2.0),
+        );
+        let i = Intersection::new(SQRT_2, s);
+        let comps = prepare_computations(&i, &r);
+        let colour = reflected_colour(&w, &comps, 0);
+        assert_eq!(colour, Colour::new(0.0, 0.0, 0.0));
     }
 }

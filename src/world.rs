@@ -5,6 +5,7 @@ use crate::rays::Ray;
 use crate::shapes::{plane, sphere, Material, Shape};
 use crate::tuple::Tuple;
 use itertools::iproduct;
+use crate::REFLECTION_RECURSION_DEPTH;
 
 pub struct World {
     pub objects: Vec<Shape>,
@@ -147,7 +148,7 @@ pub fn render(cam: &mut Camera, world: &World) -> Canvas {
     let mut image = Canvas::new(cam.hsize, cam.vsize);
     for (x, y) in iproduct!(0..cam.hsize - 1, 0..cam.vsize - 1) {
         let ray = cam.ray_for_pixel(x, y);
-        let colour = colour_at(world, &ray);
+        let colour = colour_at(world, &ray, REFLECTION_RECURSION_DEPTH);
         image.write_pixel((x, y), colour);
     }
     image
