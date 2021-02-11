@@ -2,7 +2,7 @@ use crate::canvas::{Canvas, Colour};
 use crate::lighting::{colour_at, PointLight};
 use crate::matrices::Matrix;
 use crate::rays::Ray;
-use crate::shapes::{plane, sphere, Material, Shape};
+use crate::shapes::{sphere, Material, Shape};
 use crate::tuple::Tuple;
 use itertools::iproduct;
 use crate::REFLECTION_RECURSION_DEPTH;

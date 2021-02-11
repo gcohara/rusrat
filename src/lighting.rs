@@ -54,6 +54,7 @@ pub fn prepare_computations<'a>(i: &Intersection<'a>, r: &Ray) -> PreComputation
 
 pub fn calculate_lighting(
     material: &Material,
+    object: &Shape,
     light: &PointLight,
     posn: &Tuple,
     eye_vec: &Tuple,
@@ -61,8 +62,10 @@ pub fn calculate_lighting(
     in_shadow: bool,
 ) -> Colour {
     let light_vec = (light.position - *posn).normalise();
-    let effective_colour = material.colour * light.intensity;
-
+    let effective_colour = match &material.pattern {
+        None => material.colour * light.intensity,
+        Some(p) => p.pattern_at_object(object, posn) * light.intensity,
+    };
     let ambient_term = effective_colour * material.ambient;
     match in_shadow {
         true => ambient_term,
@@ -96,8 +99,10 @@ fn shade_hit(w: &World, c: &PreComputation, remaining_recursions: usize) -> Colo
         out = out
             + calculate_lighting(
                 &c.object.material,
+                &c.object,
                 &light,
-                &c.point,
+                // helps prevent chessboard acne
+                &c.over_point,
                 &c.eye_vec,
                 &c.normal,
                 // prevent 'acne'
@@ -150,6 +155,7 @@ mod tests {
 
     #[test]
     fn eye_between_light_and_surface() {
+        let s = Shape::default();
         let m = Material::default();
         let posn = Tuple::point_new(0.0, 0.0, 0.0);
         let eye_vec = Tuple::vector_new(0.0, 0.0, -1.0);
@@ -158,13 +164,14 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 0.0, -10.0),
         );
-        let result = calculate_lighting(&m, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
         assert_eq!(result, Colour::new(1.9, 1.9, 1.9));
     }
 
     #[test]
     fn eye_between_light_and_surface_eye_offset_45deg() {
         use std::f64::consts::FRAC_1_SQRT_2;
+        let s = Shape::default();
         let m = Material::default();
         let posn = Tuple::point_new(0.0, 0.0, 0.0);
         let eye_vec = Tuple::vector_new(0.0, FRAC_1_SQRT_2, -FRAC_1_SQRT_2);
@@ -173,12 +180,13 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 0.0, -10.0),
         );
-        let result = calculate_lighting(&m, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
         assert_eq!(result, Colour::new(1.0, 1.0, 1.0));
     }
 
     #[test]
     fn eye_opposite_surface_light_offset_45deg() {
+        let s = Shape::default();
         let m = Material::default();
         let posn = Tuple::point_new(0.0, 0.0, 0.0);
         let eye_vec = Tuple::vector_new(0.0, 0.0, -1.0);
@@ -187,13 +195,14 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 10.0, -10.0),
         );
-        let result = calculate_lighting(&m, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
         assert_eq!(result, Colour::new(0.7364, 0.7364, 0.7364));
     }
 
     #[test]
     fn eye_in_path_of_reflection_vector() {
         use std::f64::consts::FRAC_1_SQRT_2;
+        let s = Shape::default();
         let m = Material::default();
         let posn = Tuple::point_new(0.0, 0.0, 0.0);
         let eye_vec = Tuple::vector_new(0.0, -FRAC_1_SQRT_2, -FRAC_1_SQRT_2);
@@ -202,18 +211,19 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 10.0, -10.0),
         );
-        let result = calculate_lighting(&m, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
         assert_eq!(result, Colour::new(1.6364, 1.6364, 1.6364));
     }
 
     #[test]
     fn lighting_with_light_behind_surface() {
+        let s = Shape::default();
         let m = Material::default();
         let posn = Tuple::point_new(0.0, 0.0, 0.0);
         let eye_vec = Tuple::vector_new(0.0, 0.0, -1.0);
         let normal_vec = Tuple::vector_new(0.0, 0.0, -1.0);
         let light = PointLight::new(Colour::new(1.0, 1.0, 1.0), Tuple::point_new(0.0, 0.0, 10.0));
-        let result = calculate_lighting(&m, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
         assert_eq!(result, Colour::new(0.1, 0.1, 0.1));
     }
 
@@ -326,6 +336,7 @@ mod tests {
 
     #[test]
     fn lighting_surface_in_shadow() {
+        let s = Shape::default();
         let m = Material::default();
         let posn = Tuple::point_new(0.0, 0.0, 0.0);
         let eye_vec = Tuple::vector_new(0.0, 0.0, -1.0);
@@ -334,7 +345,7 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 0.0, -10.0),
         );
-        let result = calculate_lighting(&m, &light, &posn, &eye_vec, &normal_vec, true);
+        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, true);
         assert_eq!(result, Colour::new(0.1, 0.1, 0.1));
     }
 
@@ -441,7 +452,7 @@ mod tests {
         let i = Intersection::new(SQRT_2, s);
         let comps = prepare_computations(&i, &r);
         let colour = shade_hit(&w, &comps, 5);
-        assert_eq!(colour, Colour::new(0.87677, 0.92436, 0.82918));
+        assert_eq!(colour, Colour::new(0.876756, 0.924338, 0.829173));
     }
 
     #[test]

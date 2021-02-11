@@ -1,5 +1,5 @@
 use crate::matrices::Matrix;
-use crate::shapes::{plane, sphere, Shape};
+use crate::shapes::Shape;
 use crate::tuple::Tuple;
 use crate::world::World;
 use std::cmp::Ordering;
@@ -74,6 +74,7 @@ impl Ray {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shapes::sphere;
     #[test]
     fn computing_point_from_distance() {
         let r = Ray::new(

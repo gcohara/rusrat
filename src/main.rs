@@ -11,7 +11,7 @@ mod world;
 use canvas::Colour;
 use lighting::PointLight;
 use matrices::Matrix;
-use shapes::{plane, sphere, Material, Shape};
+use shapes::{plane, sphere, CheckPattern3D, Material, Shape};
 use std::f64::consts::PI;
 use tuple::Tuple;
 use world::{Camera, World};
@@ -29,6 +29,11 @@ fn main() {
             colour: Colour::new(0.9, 0.9, 0.9),
             specular: 0.0,
             reflectivity: 0.0,
+            pattern: Some(Box::new(CheckPattern3D {
+                colour_a: Colour::new(0.1, 0.1, 0.1),
+                colour_b: Colour::new(0.5, 0.5, 0.5),
+                transform: Matrix::rotation_y(PI / 6.0),
+            })),
             ..Default::default()
         },
         ..plane::default()
@@ -37,7 +42,7 @@ fn main() {
         material: Material {
             specular: 1.0,
             reflectivity: 0.95,
-            colour: Colour::new(0.0,0.0,0.0),
+            colour: Colour::new(0.0, 0.0, 0.0),
             diffuse: 0.1,
             ambient: 0.1,
             ..Default::default()
@@ -77,8 +82,8 @@ fn main() {
     world.objects = vec![floor, sphere, left_wall, right_wall];
     world.lights = vec![light];
     let mut cam = Camera::new(
-        500,
-        500,
+        600,
+        600,
         PI / 4.5,
         world::view_transform(
             &Tuple::point_new(0.0, 3.1, -10.3),

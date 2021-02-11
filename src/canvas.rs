@@ -24,6 +24,14 @@ impl Colour {
             _ => comp,
         }
     }
+
+    pub fn black() -> Colour {
+        Colour::new(0.0, 0.0, 0.0)
+    }
+
+    pub fn white() -> Colour {
+        Colour::new(1.0, 1.0, 1.0)
+    }
 }
 
 impl ToString for Colour {
