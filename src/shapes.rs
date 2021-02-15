@@ -17,6 +17,7 @@ pub struct Shape {
 }
 
 #[derive(Debug)]
+// go through and annotate all these attributes
 pub struct Material {
     pub colour: Colour,
     pub ambient: f64,
@@ -24,6 +25,8 @@ pub struct Material {
     pub specular: f64,
     pub shininess: f64,
     pub reflectivity: f64,
+    pub transparency: f64,
+    pub refractive_index: f64,
     pub pattern: Option<Box<dyn Pattern>>,
 }
 
@@ -41,6 +44,11 @@ pub struct CheckPattern3D {
     pub transform: Matrix<f64, 4, 4>,
 }
 
+#[derive(Debug, PartialEq, Default)]
+pub struct TestPattern {
+    pub transform: Matrix<f64, 4, 4>,
+}
+
 impl Pattern for CheckPattern3D {
     fn pattern_at(&self, point: &Tuple) -> Colour {
         if (point.x.floor() + point.y.floor() + point.z.floor()) as i32 % 2 == 0 {
@@ -49,6 +57,18 @@ impl Pattern for CheckPattern3D {
             self.colour_b
         }
     }
+    fn pattern_at_object(&self, object: &Shape, point: &Tuple) -> Colour {
+        let object_space_point = object.transform.inverse() * point;
+        let pattern_point = self.transform.inverse() * &object_space_point;
+        self.pattern_at(&pattern_point)
+    }
+}
+
+impl Pattern for TestPattern {
+    fn pattern_at(&self, point: &Tuple) -> Colour {
+        Colour::new(point.x, point.y, point.z)
+    }
+    
     fn pattern_at_object(&self, object: &Shape, point: &Tuple) -> Colour {
         let object_space_point = object.transform.inverse() * point;
         let pattern_point = self.transform.inverse() * &object_space_point;
@@ -172,6 +192,18 @@ pub mod sphere {
         }
     }
 
+    pub fn glass_sphere() -> Shape {
+        Shape {
+            shape: ShapeType::Sphere,
+            material: Material {
+                transparency: 1.0,
+                refractive_index: 1.5,
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
     pub(super) fn intersects<'a>(sphere: &'a Shape, r: &Ray) -> Vec<Intersection<'a>> {
         let sphere_to_ray = r.origin - Tuple::point_new(0.0, 0.0, 0.0);
         let a = r.direction.dot(&r.direction);
@@ -207,6 +239,8 @@ impl Default for Material {
             specular: 0.9,
             shininess: 200.0,
             reflectivity: 0.0,
+            refractive_index: 1.0,
+            transparency: 0.0,
             pattern: None,
         }
     }

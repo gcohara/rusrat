@@ -34,9 +34,9 @@ impl<'a> Intersection<'a> {
         Intersection { t, object }
     }
 
-    pub fn hit(intersections: Vec<Intersection<'a>>) -> Option<Intersection<'a>> {
+    pub fn hit(intersections: &'a Vec<Intersection<'a>>) -> Option<&'a Intersection<'a>> {
         intersections
-            .into_iter()
+            .iter()
             .filter(|x| x.t >= 0.0)
             .min_by(|i1, i2| i1.partial_cmp(i2).unwrap())
     }
@@ -44,6 +44,9 @@ impl<'a> Intersection<'a> {
 
 impl Ray {
     pub fn new(point: Tuple, vector: Tuple) -> Ray {
+        if point.is_vector() || vector.is_point() {
+            panic!("Arguments passed to Ray::new in incorrect order!\n");
+        }
         Ray {
             origin: point,
             direction: vector,
@@ -167,8 +170,8 @@ mod tests {
         let i1 = Intersection::new(1.0, &s);
         let i2 = Intersection::new(2.0, &s);
         let xs = vec![i1, i2];
-        let i = Intersection::hit(xs).unwrap();
-        assert_eq!(i, Intersection::new(1.0, &s));
+        let i = Intersection::hit(&xs).unwrap();
+        assert_eq!(*i, Intersection::new(1.0, &s));
     }
 
     #[test]
@@ -177,8 +180,8 @@ mod tests {
         let i1 = Intersection::new(-1.0, &s);
         let i2 = Intersection::new(1.0, &s);
         let xs = vec![i1, i2];
-        let i = Intersection::hit(xs).unwrap();
-        assert_eq!(i, Intersection::new(1.0, &s));
+        let i = Intersection::hit(&xs).unwrap();
+        assert_eq!(*i, Intersection::new(1.0, &s));
     }
 
     #[test]
@@ -187,7 +190,7 @@ mod tests {
         let i1 = Intersection::new(-1.0, &s);
         let i2 = Intersection::new(-2.0, &s);
         let xs = vec![i1, i2];
-        let i = Intersection::hit(xs);
+        let i = Intersection::hit(&xs);
         assert_eq!(i, Option::None);
     }
 
