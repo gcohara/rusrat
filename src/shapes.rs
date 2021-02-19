@@ -248,7 +248,8 @@ impl Default for Material {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::lighting::ShadowInformation;
+use super::*;
     use crate::float_eq;
     use crate::lighting::{calculate_lighting, PointLight};
 
@@ -426,7 +427,7 @@ mod tests {
             &Tuple::point_new(0.9, 0.0, 0.0),
             &eyevec,
             &normalvec,
-            false,
+            &ShadowInformation::default(),
         );
         let c2 = calculate_lighting(
             &m,
@@ -435,7 +436,7 @@ mod tests {
             &Tuple::point_new(1.1, 0.0, 0.0),
             &eyevec,
             &normalvec,
-            false,
+            &ShadowInformation::default(),
         );
         assert_eq!(c1, Colour::white());
         assert_eq!(c2, Colour::black());

@@ -22,6 +22,12 @@ pub struct PreComputation<'a> {
     n1: f64,
     n2: f64,
 }
+#[derive(Default)]
+pub struct ShadowInformation {
+    in_shadow: bool,
+    shadowing_object_transparency: f64,
+    shadowing_object_colour: Colour,
+}
 
 impl PointLight {
     pub fn new(intensity: Colour, position: Tuple) -> PointLight {
@@ -114,7 +120,7 @@ pub fn calculate_lighting(
     posn: &Tuple,
     eye_vec: &Tuple,
     normal: &Tuple,
-    in_shadow: bool,
+    shadow_data: &ShadowInformation,
 ) -> Colour {
     let light_vec = (light.position - *posn).normalise();
     let effective_colour = match &material.pattern {
@@ -122,29 +128,31 @@ pub fn calculate_lighting(
         Some(p) => p.pattern_at_object(object, posn) * light.intensity,
     };
     let ambient_term = effective_colour * material.ambient;
-    match in_shadow {
-        true => ambient_term,
-        false => {
-            let light_normal_dot = light_vec.dot(normal);
-            let diffuse = if light_normal_dot < 0.0 {
-                Colour::new(0.0, 0.0, 0.0)
-            } else {
-                effective_colour * material.diffuse * light_normal_dot
-            };
+    let light_normal_dot = light_vec.dot(normal);
+    let diffuse = if light_normal_dot < 0.0 {
+        Colour::new(0.0, 0.0, 0.0)
+    } else {
+        effective_colour * material.diffuse * light_normal_dot
+    };
 
-            let specular = if light_normal_dot < 0.0 {
-                Colour::new(0.0, 0.0, 0.0)
-            } else {
-                let reflect_vec = normal.reflect(&light_vec.negate());
-                let reflect_eye_dot = reflect_vec.dot(eye_vec);
-                if reflect_eye_dot <= 0.0 {
-                    Colour::new(0.0, 0.0, 0.0)
-                } else {
-                    light.intensity * material.specular * reflect_eye_dot.powf(material.shininess)
-                }
-            };
-            ambient_term + diffuse + specular
+    let specular = if light_normal_dot < 0.0 {
+        Colour::new(0.0, 0.0, 0.0)
+    } else {
+        let reflect_vec = normal.reflect(&light_vec.negate());
+        let reflect_eye_dot = reflect_vec.dot(eye_vec);
+        if reflect_eye_dot <= 0.0 {
+            Colour::new(0.0, 0.0, 0.0)
+        } else {
+            light.intensity * material.specular * reflect_eye_dot.powf(material.shininess)
         }
+    };
+    match shadow_data.in_shadow {
+        true => {
+            ambient_term
+                + ((diffuse * shadow_data.shadowing_object_colour)
+                    * shadow_data.shadowing_object_transparency.powi(2))
+        }
+        false => ambient_term + diffuse + specular,
     }
 }
 
@@ -161,7 +169,7 @@ fn shade_hit(w: &World, c: &PreComputation, remaining_recursions: usize) -> Colo
                 &c.eye_vec,
                 &c.normal,
                 // prevent 'acne'
-                is_shadowed(&w, &c.over_point),
+                &is_shadowed(&w, &c.over_point),
             );
     }
     let reflected = reflected_colour(w, c, remaining_recursions);
@@ -188,15 +196,22 @@ pub fn colour_at(w: &World, r: &Ray, remaining_recursions: usize) -> Colour {
     }
 }
 
-fn is_shadowed(w: &World, p: &Tuple) -> bool {
+fn is_shadowed(w: &World, p: &Tuple) -> ShadowInformation {
     // need to adjust for multiple lights
     let point_to_light = w.lights[0].position - *p;
     let distance_to_light = point_to_light.magnitude();
     let point_to_light_ray = Ray::new(*p, point_to_light.normalise());
     let intersections = point_to_light_ray.intersects_world(w);
     match Intersection::hit(&intersections) {
-        None => false,
-        Some(h) => h.t < distance_to_light,
+        None => ShadowInformation {
+            in_shadow: false,
+            ..Default::default()
+        },
+        Some(h) => ShadowInformation {
+            in_shadow: h.t < distance_to_light,
+            shadowing_object_transparency: h.object.material.transparency,
+            shadowing_object_colour: h.object.material.colour,
+        },
     }
 }
 
@@ -258,7 +273,15 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 0.0, -10.0),
         );
-        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(
+            &m,
+            &s,
+            &light,
+            &posn,
+            &eye_vec,
+            &normal_vec,
+            &ShadowInformation::default(),
+        );
         assert_eq!(result, Colour::new(1.9, 1.9, 1.9));
     }
 
@@ -274,7 +297,15 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 0.0, -10.0),
         );
-        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(
+            &m,
+            &s,
+            &light,
+            &posn,
+            &eye_vec,
+            &normal_vec,
+            &ShadowInformation::default(),
+        );
         assert_eq!(result, Colour::new(1.0, 1.0, 1.0));
     }
 
@@ -289,7 +320,15 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 10.0, -10.0),
         );
-        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(
+            &m,
+            &s,
+            &light,
+            &posn,
+            &eye_vec,
+            &normal_vec,
+            &ShadowInformation::default(),
+        );
         assert_eq!(result, Colour::new(0.7364, 0.7364, 0.7364));
     }
 
@@ -305,7 +344,15 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 10.0, -10.0),
         );
-        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(
+            &m,
+            &s,
+            &light,
+            &posn,
+            &eye_vec,
+            &normal_vec,
+            &ShadowInformation::default(),
+        );
         assert_eq!(result, Colour::new(1.6364, 1.6364, 1.6364));
     }
 
@@ -317,7 +364,15 @@ mod tests {
         let eye_vec = Tuple::vector_new(0.0, 0.0, -1.0);
         let normal_vec = Tuple::vector_new(0.0, 0.0, -1.0);
         let light = PointLight::new(Colour::new(1.0, 1.0, 1.0), Tuple::point_new(0.0, 0.0, 10.0));
-        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, false);
+        let result = calculate_lighting(
+            &m,
+            &s,
+            &light,
+            &posn,
+            &eye_vec,
+            &normal_vec,
+            &ShadowInformation::default(),
+        );
         assert_eq!(result, Colour::new(0.1, 0.1, 0.1));
     }
 
@@ -439,7 +494,18 @@ mod tests {
             Colour::new(1.0, 1.0, 1.0),
             Tuple::point_new(0.0, 0.0, -10.0),
         );
-        let result = calculate_lighting(&m, &s, &light, &posn, &eye_vec, &normal_vec, true);
+        let result = calculate_lighting(
+            &m,
+            &s,
+            &light,
+            &posn,
+            &eye_vec,
+            &normal_vec,
+            &ShadowInformation {
+                in_shadow: true,
+                ..Default::default()
+            },
+        );
         assert_eq!(result, Colour::new(0.1, 0.1, 0.1));
     }
 
@@ -447,28 +513,28 @@ mod tests {
     fn no_shadow_when_nothing_between_point_and_light() {
         let w = World::default();
         let p = Tuple::point_new(0.0, 10.0, 0.0);
-        assert!(!is_shadowed(&w, &p));
+        assert!(!is_shadowed(&w, &p).in_shadow);
     }
 
     #[test]
     fn shadow_when_object_between_point_and_light() {
         let w = World::default();
         let p = Tuple::point_new(10.0, -10.0, 10.0);
-        assert!(is_shadowed(&w, &p));
+        assert!(is_shadowed(&w, &p).in_shadow);
     }
 
     #[test]
     fn no_shadow_when_object_behind_light() {
         let w = World::default();
         let p = Tuple::point_new(-20.0, 20.0, -20.0);
-        assert!(!is_shadowed(&w, &p));
+        assert!(!is_shadowed(&w, &p).in_shadow);
     }
 
     #[test]
     fn no_shadow_when_object_behind_point() {
         let w = World::default();
         let p = Tuple::point_new(-20.0, 20.0, -20.0);
-        assert!(!is_shadowed(&w, &p));
+        assert!(!is_shadowed(&w, &p).in_shadow);
     }
 
     #[test]
