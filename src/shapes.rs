@@ -2,21 +2,24 @@ use crate::canvas::Colour;
 use crate::matrices::Matrix;
 use crate::rays::{Intersection, Ray};
 use crate::tuple::Tuple;
+use serde::Serialize;
+use erased_serde;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub enum ShapeType {
     Sphere,
     Plane,
+    // Cube
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct Shape {
     pub material: Material,
     pub transform: Matrix<f64, 4, 4>,
     pub shape: ShapeType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 // go through and annotate all these attributes
 pub struct Material {
     pub colour: Colour,
@@ -30,21 +33,21 @@ pub struct Material {
     pub pattern: Option<Box<dyn Pattern>>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct StripePattern {
     pub colour_a: Colour,
     pub colour_b: Colour,
     pub transform: Matrix<f64, 4, 4>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize)]
 pub struct CheckPattern3D {
     pub colour_a: Colour,
     pub colour_b: Colour,
     pub transform: Matrix<f64, 4, 4>,
 }
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Default, Serialize)]
 pub struct TestPattern {
     pub transform: Matrix<f64, 4, 4>,
 }
@@ -68,7 +71,7 @@ impl Pattern for TestPattern {
     fn pattern_at(&self, point: &Tuple) -> Colour {
         Colour::new(point.x, point.y, point.z)
     }
-    
+
     fn pattern_at_object(&self, object: &Shape, point: &Tuple) -> Colour {
         let object_space_point = object.transform.inverse() * point;
         let pattern_point = self.transform.inverse() * &object_space_point;
@@ -82,10 +85,11 @@ impl PartialEq for Material {
     }
 }
 
-pub trait Pattern {
+pub trait Pattern: erased_serde::Serialize {
     fn pattern_at(&self, point: &Tuple) -> Colour;
     fn pattern_at_object(&self, object: &Shape, point: &Tuple) -> Colour;
 }
+erased_serde::serialize_trait_object!(Pattern);
 
 impl std::fmt::Debug for dyn Pattern {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -248,9 +252,9 @@ impl Default for Material {
 
 #[cfg(test)]
 mod tests {
-    use crate::lighting::ShadowInformation;
-use super::*;
+    use super::*;
     use crate::float_eq;
+    use crate::lighting::ShadowInformation;
     use crate::lighting::{calculate_lighting, PointLight};
 
     #[test]
@@ -536,4 +540,12 @@ use super::*;
             Colour::black()
         );
     }
+
+    // #[test]
+    // fn serialise_a_shape() {
+    //     let s = Shape::default();
+    //     let yaml = serde_yaml::to_string(&s).unwrap();
+    //     println!("{}", yaml);
+    //     assert!(false);
+    // }
 }

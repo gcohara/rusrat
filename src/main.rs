@@ -7,7 +7,10 @@ mod rays;
 mod shapes;
 mod tuple;
 mod world;
+mod yaml;
 
+
+use yaml_rust::YamlLoader;
 use canvas::Colour;
 use lighting::PointLight;
 use matrices::Matrix;
@@ -23,7 +26,18 @@ pub fn float_eq(a: f64, b: f64) -> bool {
     (a - b).abs() < EPSILON
 }
 
+// fn parse_yaml() -> World {}
+
 fn main() {
+    let s = std::fs::read_to_string("scene1.yaml").unwrap();
+    let yaml = YamlLoader::load_from_str(&s).unwrap();
+    for thing in yaml {
+        println!("{:#?}", thing);
+        println!("Another thing...");
+    }
+    
+    // let s = YamlLoader
+    
     let floor = Shape {
         material: Material {
             colour: Colour::new(0.1, 0.1, 0.1),
@@ -71,12 +85,12 @@ fn main() {
             colour: Colour::new(0.9, 1.0, 1.0),
             diffuse: 0.0,
             specular: 0.9,
-            transparency:0.9,
+            transparency: 0.9,
             reflectivity: 0.9,
             refractive_index: 1.5,
             ..Default::default()
         },
-        transform: Matrix::translation(0.0, 3.0, -8.0).scale(0.5,0.5,0.5),
+        transform: Matrix::translation(0.0, 3.0, -8.0).scale(0.5, 0.5, 0.5),
         ..sphere::default()
     };
     let inner_ball = Shape {
@@ -86,12 +100,12 @@ fn main() {
             ambient: 0.0,
             diffuse: 0.0,
             specular: 0.9,
-            shininess:300.0,
-            transparency:0.9,
+            shininess: 300.0,
+            transparency: 0.9,
             refractive_index: 1.00000034,
             ..Default::default()
         },
-        transform: Matrix::translation(0.0,3.0,-8.0).scale(0.3,0.3,0.3),
+        transform: Matrix::translation(0.0, 3.0, -8.0).scale(0.3, 0.3, 0.3),
         ..Default::default()
     };
     let sphere = Shape {
@@ -99,7 +113,7 @@ fn main() {
             colour: Colour::new(0.3, 0.1, 0.1),
             diffuse: 0.7,
             specular: 0.6,
-            transparency:0.0,
+            transparency: 0.0,
             reflectivity: 0.1,
             refractive_index: 1.5,
             ..Default::default()
@@ -121,7 +135,14 @@ fn main() {
         Tuple::point_new(-10.0, 10.0, -10.0),
     );
     let mut world = World::new();
-    world.objects = vec![floor, sphere, left_wall, mirror_ball, sphere_glass, inner_ball];
+    world.objects = vec![
+        floor,
+        sphere,
+        left_wall,
+        mirror_ball,
+        sphere_glass,
+        inner_ball,
+    ];
     world.lights = vec![light];
     let mut cam = Camera::new(
         1000,
@@ -133,12 +154,10 @@ fn main() {
             &Tuple::vector_new(0.0, 1.0, 0.0),
         ),
     );
-    let canv = world::render(&mut cam, &world);
-    canv.write_out_as_ppm_file();
+    // let canv = world::render(&mut cam, &world);
+    // canv.write_out_as_ppm_file();
 
-
-////// glass ball
-
+    ////// glass ball
 
     // let light = PointLight::new(
     //     Colour::new(0.9,0.9, 0.9),
@@ -172,7 +191,7 @@ fn main() {
     //         .translate(0.0, 0.0, 10.0),
     //     ..plane::default()
     // };
-    
+
     // let sphere = Shape {
     //     material: Material {
     //         colour: Colour::new(0.9, 1.0, 1.0),
@@ -206,3 +225,21 @@ fn main() {
     // let canv = world::render(&mut cam, &world);
     // canv.write_out_as_ppm_file();
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+
+//     #[test]
+//     fn yaml_sphere() {
+//         let yaml = "- add: plane
+//   material:
+//     colour: [1,1,1]
+//     ambient: 1
+//     diffuse: 0
+//     specular: 0
+//   transform:
+//     - [rotate-x, 1.5707]
+//     - [translate, 0, 0, 500]";
+//     }
+// }

@@ -3,5 +3,10 @@ authors = ["George O'Hara <georgeohara92@gmail.com>"]
 edition = "2018"
 name = "rusrat"
 version = "0.1.0"
+
 [dependencies]
 itertools = "*"
+serde = {version = "1.0", features = ["derive"]}
+serde_yaml = "0.8"
+erased-serde = "0.3"
+yaml-rust = "0.4"

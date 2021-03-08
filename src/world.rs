@@ -12,16 +12,16 @@ pub struct World {
     pub lights: Vec<PointLight>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq)]
 pub struct Camera {
-    hsize: usize,
-    vsize: usize,
-    field_of_view: f64,
-    transform: Matrix<f64, 4, 4>,
+    pub hsize: usize,
+    pub vsize: usize,
+    pub field_of_view: f64,
+    pub transform: Matrix<f64, 4, 4>,
     // cache/memoise these values
-    pixel_size: Option<f64>,
-    half_width: Option<f64>,
-    half_height: Option<f64>,
+    pub pixel_size: Option<f64>,
+    pub half_width: Option<f64>,
+    pub half_height: Option<f64>,
 }
 
 impl Camera {

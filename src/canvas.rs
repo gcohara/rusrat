@@ -1,8 +1,9 @@
 use std::fs::File;
 use std::io::Write;
 use std::ops::{Add, Mul, Sub};
+use serde::Serialize;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct Colour {
     red: f64,
     green: f64,

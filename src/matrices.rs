@@ -1,20 +1,30 @@
 use crate::tuple::Tuple;
 use itertools::iproduct;
 use std::ops::{Index, IndexMut, Mul};
+// use serde::{Serialize, Serializer};
+use serde::ser::{Serialize, Serializer, SerializeStruct};
 
 #[derive(Debug)]
 pub struct Matrix<T, const ROWS: usize, const COLUMNS: usize> {
-    rows: usize,
-    columns: usize,
     data: [[T; ROWS]; COLUMNS],
 }
+
+impl Serialize for Matrix<f64, 4, 4> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where S: Serializer {
+        let mut state = serializer.serialize_struct("Matrix4x4", 3)?;
+        state.serialize_field("data", &self.data)?;
+        state.end()
+    }
+}
+
 
 // Implementations for floating point square matrix types
 impl<const SIZE: usize> Matrix<f64, SIZE, SIZE> {
     pub fn from_array(values: &[[f64; SIZE]; SIZE]) -> Self {
         Matrix {
-            rows: SIZE,
-            columns: SIZE,
+            // rows: SIZE,
+            // columns: SIZE,
             data: values.clone(),
         }
     }
