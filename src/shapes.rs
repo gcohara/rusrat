@@ -1,25 +1,24 @@
+use std::any::Any;
 use crate::canvas::Colour;
 use crate::matrices::Matrix;
 use crate::rays::{Intersection, Ray};
 use crate::tuple::Tuple;
-use serde::Serialize;
-use erased_serde;
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq)]
 pub enum ShapeType {
     Sphere,
     Plane,
     // Cube
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq)]
 pub struct Shape {
     pub material: Material,
     pub transform: Matrix<f64, 4, 4>,
     pub shape: ShapeType,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, PartialEq)]
 // go through and annotate all these attributes
 pub struct Material {
     pub colour: Colour,
@@ -33,28 +32,38 @@ pub struct Material {
     pub pattern: Option<Box<dyn Pattern>>,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq)]
 pub struct StripePattern {
     pub colour_a: Colour,
     pub colour_b: Colour,
     pub transform: Matrix<f64, 4, 4>,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq)]
 pub struct CheckPattern3D {
     pub colour_a: Colour,
     pub colour_b: Colour,
     pub transform: Matrix<f64, 4, 4>,
 }
 
-#[derive(Debug, PartialEq, Default, Serialize)]
+#[derive(Debug, PartialEq, Default)]
 pub struct TestPattern {
     pub transform: Matrix<f64, 4, 4>,
 }
 
 impl Pattern for CheckPattern3D {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn box_eq(&self, other: &dyn Any) -> bool {
+        other.downcast_ref::<Self>().map_or(false, |a| self == a)
+    }
     fn pattern_at(&self, point: &Tuple) -> Colour {
-        if (point.x.floor() + point.y.floor() + point.z.floor()) as i32 % 2 == 0 {
+        const EPSILON: f64 = 0.00001;
+        let x = if point.x.abs() < EPSILON { 0.0 } else {point.x};
+        let y = if point.y.abs() < EPSILON { 0.0 } else {point.y};
+        let z = if point.z.abs() < EPSILON { 0.0 } else {point.z};
+        if (x.floor() + y.floor() + z.floor()) as i32 % 2 == 0 {
             self.colour_a
         } else {
             self.colour_b
@@ -68,6 +77,12 @@ impl Pattern for CheckPattern3D {
 }
 
 impl Pattern for TestPattern {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn box_eq(&self, other: &dyn Any) -> bool {
+        other.downcast_ref::<Self>().map_or(false, |a| self == a)
+    }
     fn pattern_at(&self, point: &Tuple) -> Colour {
         Colour::new(point.x, point.y, point.z)
     }
@@ -79,17 +94,19 @@ impl Pattern for TestPattern {
     }
 }
 
-impl PartialEq for Material {
-    fn eq(&self, other: &Self) -> bool {
-        self as *const _ == other as *const _
+impl PartialEq for Box<dyn Pattern> {
+    fn eq(&self, other: &Box<dyn Pattern>) -> bool {
+        self.box_eq(other.as_any())
     }
 }
 
-pub trait Pattern: erased_serde::Serialize {
+pub trait Pattern : Any  {
+    fn as_any(&self) -> &dyn Any;
+    fn box_eq(&self, other: &dyn Any) -> bool;
     fn pattern_at(&self, point: &Tuple) -> Colour;
     fn pattern_at_object(&self, object: &Shape, point: &Tuple) -> Colour;
 }
-erased_serde::serialize_trait_object!(Pattern);
+
 
 impl std::fmt::Debug for dyn Pattern {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -98,6 +115,12 @@ impl std::fmt::Debug for dyn Pattern {
 }
 
 impl Pattern for StripePattern {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn box_eq(&self, other: &dyn Any) -> bool {
+        other.downcast_ref::<Self>().map_or(false, |a| self == a)
+    }
     fn pattern_at(&self, point: &Tuple) -> Colour {
         if point.x.floor() as i32 % 2 == 0 {
             self.colour_a

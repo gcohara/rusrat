@@ -1,11 +1,10 @@
 use crate::canvas::Colour;
 use crate::lighting::PointLight;
 use crate::matrices::Matrix;
-use crate::shapes::{Material, Pattern, CheckPattern3D, StripePattern};
+use crate::shapes::{CheckPattern3D, Material, Pattern, Shape, ShapeType, StripePattern};
 use crate::tuple::Tuple;
-use crate::world::{self, World};
+use crate::world::{self, Camera, World};
 use yaml_rust::{yaml, Yaml};
-use yaml_rust::{YamlEmitter, YamlLoader};
 
 enum EntityKind {
     Camera,
@@ -28,6 +27,79 @@ enum TransformType {
     Scale(f64, f64, f64),
 }
 
+pub fn parse_config(config: &yaml::Yaml) -> (World, Camera) {
+    let mut w = World::new();
+    let mut c = Camera::default();
+    // iterate over the structures
+    if let Yaml::Array(entities) = config {
+        for node in entities {
+            
+            if let Yaml::Hash(entity) = node {
+                match entity_kind(entity) {
+                    EntityKind::Camera => c = camera_from_config(&node),
+                    EntityKind::Light => w.lights.push(light_from_config(&node)),
+                    EntityKind::Plane | EntityKind::Sphere => {
+                        w.objects.push(shape_from_config(&node))
+                    }
+                };
+            }
+        }
+    }
+    (w, c)
+}
+
+// this function assumes that it's being given a Yaml::Hash whose "add" field is "camera"
+// it will panic otherwise
+
+fn camera_from_config(cam_yaml: &yaml::Yaml) -> world::Camera {
+    if let Yaml::Hash(_cam_config) = cam_yaml {
+        let from = destructure_yaml_array_into_tuple(&cam_yaml["from"], TupleKind::Point);
+        let to = destructure_yaml_array_into_tuple(&cam_yaml["to"], TupleKind::Point);
+        let up = destructure_yaml_array_into_tuple(&cam_yaml["up"], TupleKind::Vector);
+        world::Camera {
+            hsize: cam_yaml["width"].as_i64().unwrap() as usize,
+            vsize: cam_yaml["height"].as_i64().unwrap() as usize,
+            field_of_view: cam_yaml["field-of-view"].as_f64().unwrap(),
+            transform: world::view_transform(&from, &to, &up),
+            ..Default::default()
+        }
+    } else {
+        unreachable!()
+    }
+}
+
+fn shape_from_config(shape_yaml: &yaml::Yaml) -> Shape {
+    if let Yaml::Hash(_) = shape_yaml {
+        let mut out = Shape::default();
+        if let Yaml::Array(_) = shape_yaml["transform"] {
+            out.transform = parse_transforms(&shape_yaml["transform"]);
+        };
+        if let Yaml::Hash(_) = shape_yaml["material"] {
+            out.material = parse_material(&shape_yaml["material"]);
+        };
+        out.shape = match &shape_yaml["add"] {
+            Yaml::String(kind) if kind == "sphere" => ShapeType::Sphere,
+            Yaml::String(kind) if kind == "plane" => ShapeType::Plane,
+            _ => panic!(),
+        };
+        out
+    } else {
+        unreachable!()
+    }
+}
+
+// assume that it's being given a Yaml::Hash whose "add" field is "light"
+
+fn light_from_config(light_yaml: &yaml::Yaml) -> PointLight {
+    if let Yaml::Hash(_) = light_yaml {
+        let at = destructure_yaml_array_into_tuple(&light_yaml["at"], TupleKind::Point);
+        let intensity = destructure_yaml_array_into_colour(&light_yaml["intensity"]);
+        PointLight::new(intensity, at)
+    } else {
+        unreachable!()
+    }
+}
+
 fn parse_transforms(transform_array: &yaml::Yaml) -> Matrix<f64, 4, 4> {
     if let Yaml::Array(ts) = transform_array {
         let mut out = Matrix::identity();
@@ -48,6 +120,7 @@ fn parse_transforms(transform_array: &yaml::Yaml) -> Matrix<f64, 4, 4> {
 }
 
 // should be given a &Yaml::Array, which looks like ["rotate-x", 1]
+
 fn transform_type_and_data(transform: &yaml::Yaml) -> TransformType {
     match &transform[0] {
         Yaml::String(s) if s == "rotate-x" => TransformType::RotateX(parse_number(&transform[1])),
@@ -63,12 +136,14 @@ fn transform_type_and_data(transform: &yaml::Yaml) -> TransformType {
             parse_number(&transform[2]),
             parse_number(&transform[3]),
         ),
+        Yaml::String(s) => panic!("String {} is not a valid transform", s),
         _ => unreachable!(),
     }
 }
 
 // must only be passed a Yaml::Integer or Yaml::Real.
 // returns the number within as an f64
+
 fn parse_number(num: &yaml::Yaml) -> f64 {
     match num {
         Yaml::Integer(x) => *x as f64,
@@ -79,6 +154,7 @@ fn parse_number(num: &yaml::Yaml) -> f64 {
 
 // expects to be given a Yaml::Hash, which maps the properties of the material
 // e.g "colour" onto their appropriate yaml::Yaml variants.
+
 fn parse_material(material: &yaml::Yaml) -> Material {
     let mut out = Material::default();
     if material["colour"] != Yaml::BadValue {
@@ -115,27 +191,27 @@ fn parse_material(material: &yaml::Yaml) -> Material {
 
 // expects to be given a Yaml::Hash, which contains the type of pattern and
 // the relevant colours and transform etc
+
 fn parse_pattern(pattern_map: &yaml::Yaml) -> Box<dyn Pattern> {
     match &pattern_map["type"] {
         Yaml::String(s) if s == "3d-check" => Box::new(parse_check_pattern(&pattern_map)),
         Yaml::String(s) if s == "stripe" => Box::new(parse_stripe_pattern(&pattern_map)),
         _ => unreachable!(),
     }
-    
 }
 
 fn parse_check_pattern(pattern_map: &yaml::Yaml) -> CheckPattern3D {
     let mut out = CheckPattern3D::default();
     if pattern_map["colour-a"] != Yaml::BadValue {
-        out.colour_a= destructure_yaml_array_into_colour(&pattern_map["colour-a"]);
+        out.colour_a = destructure_yaml_array_into_colour(&pattern_map["colour-a"]);
     } else if pattern_map["color-a"] != Yaml::BadValue {
-        out.colour_a= destructure_yaml_array_into_colour(&pattern_map["color-a"]);
+        out.colour_a = destructure_yaml_array_into_colour(&pattern_map["color-a"]);
     };
 
     if pattern_map["colour-b"] != Yaml::BadValue {
-        out.colour_b= destructure_yaml_array_into_colour(&pattern_map["colour-b"]);
+        out.colour_b = destructure_yaml_array_into_colour(&pattern_map["colour-b"]);
     } else if pattern_map["color-a"] != Yaml::BadValue {
-        out.colour_b= destructure_yaml_array_into_colour(&pattern_map["color-b"]);
+        out.colour_b = destructure_yaml_array_into_colour(&pattern_map["color-b"]);
     };
 
     if pattern_map["transform"] != Yaml::BadValue {
@@ -147,39 +223,21 @@ fn parse_check_pattern(pattern_map: &yaml::Yaml) -> CheckPattern3D {
 fn parse_stripe_pattern(pattern_map: &yaml::Yaml) -> StripePattern {
     let mut out = StripePattern::default();
     if pattern_map["colour-a"] != Yaml::BadValue {
-        out.colour_a= destructure_yaml_array_into_colour(&pattern_map["colour-a"]);
+        out.colour_a = destructure_yaml_array_into_colour(&pattern_map["colour-a"]);
     } else if pattern_map["color-a"] != Yaml::BadValue {
-        out.colour_a= destructure_yaml_array_into_colour(&pattern_map["color-a"]);
+        out.colour_a = destructure_yaml_array_into_colour(&pattern_map["color-a"]);
     };
 
     if pattern_map["colour-b"] != Yaml::BadValue {
-        out.colour_b= destructure_yaml_array_into_colour(&pattern_map["colour-b"]);
+        out.colour_b = destructure_yaml_array_into_colour(&pattern_map["colour-b"]);
     } else if pattern_map["color-a"] != Yaml::BadValue {
-        out.colour_b= destructure_yaml_array_into_colour(&pattern_map["color-b"]);
+        out.colour_b = destructure_yaml_array_into_colour(&pattern_map["color-b"]);
     };
 
     if pattern_map["transform"] != Yaml::BadValue {
         out.transform = parse_transforms(&pattern_map["transform"]);
     };
     out
-}
-
-fn parse_scene(config: yaml::Yaml) -> World {
-    let mut w = World::new();
-    // iterate over the structures
-    if let Yaml::Array(entities) = config {
-        for node in entities {
-            if let Yaml::Hash(entity) = node {
-                let object = match entity_kind(entity) {
-                    EntityKind::Camera => {}
-                    EntityKind::Light => {}
-                    EntityKind::Plane => {}
-                    EntityKind::Sphere => {}
-                };
-            }
-        }
-    }
-    World::default()
 }
 
 fn destructure_yaml_array_into_tuple(array: &yaml::Yaml, kind: TupleKind) -> Tuple {
@@ -219,43 +277,13 @@ fn destructure_yaml_array_into_colour(array: &yaml::Yaml) -> Colour {
     }
 }
 
-// this function assumes that it's being given a Yaml::Hash whose "add" field is "camera"
-// it will panic otherwise
-fn camera_from_config(cam_yaml: &yaml::Yaml) -> world::Camera {
-    if let Yaml::Hash(_cam_config) = cam_yaml {
-        let from = destructure_yaml_array_into_tuple(&cam_yaml["from"], TupleKind::Point);
-        let to = destructure_yaml_array_into_tuple(&cam_yaml["to"], TupleKind::Point);
-        let up = destructure_yaml_array_into_tuple(&cam_yaml["up"], TupleKind::Vector);
-        world::Camera {
-            hsize: cam_yaml["width"].as_i64().unwrap() as usize,
-            vsize: cam_yaml["height"].as_i64().unwrap() as usize,
-            field_of_view: cam_yaml["field-of-view"].as_f64().unwrap(),
-            transform: world::view_transform(&from, &to, &up),
-            ..Default::default()
-        }
-    } else {
-        unreachable!()
-    }
-}
-
-// assume that it's being given a Yaml::Hash whose "add" field is "light"
-fn light_from_config(light_yaml: &yaml::Yaml) -> PointLight {
-    if let Yaml::Hash(_) = light_yaml {
-        let at = destructure_yaml_array_into_tuple(&light_yaml["at"], TupleKind::Point);
-        let intensity = destructure_yaml_array_into_colour(&light_yaml["intensity"]);
-        PointLight::new(intensity, at)
-    } else {
-        unreachable!()
-    }
-}
-
-fn entity_kind(entity: yaml::Hash) -> EntityKind {
+fn entity_kind(entity: &yaml::Hash) -> EntityKind {
     let s = entity.get(&Yaml::String("add".to_string())).unwrap();
     match s {
         Yaml::String(kind) if kind == "sphere" => EntityKind::Sphere,
         Yaml::String(kind) if kind == "plane" => EntityKind::Plane,
-        Yaml::String(kind) if kind == "camera" => EntityKind::Light,
-        Yaml::String(kind) if kind == "light" => EntityKind::Camera,
+        Yaml::String(kind) if kind == "camera" => EntityKind::Camera,
+        Yaml::String(kind) if kind == "light" => EntityKind::Light,
         _ => panic!(),
     }
 }
@@ -263,6 +291,7 @@ fn entity_kind(entity: yaml::Hash) -> EntityKind {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shapes;
     use crate::Matrix;
 
     #[test]
@@ -345,5 +374,65 @@ transform:
             [0.0, 0.0, 0.0, 1.0],
         ]);
         assert_eq!(transform, expected);
+    }
+
+    #[test]
+    fn reads_in_a_sphere() {
+        let yaml_sphere = "
+- add: sphere
+  material:
+    colour: [1,1,1]
+    ambient: 1
+    diffuse: 0
+    specular: 0
+  transform:
+    - [ rotate-x, 1.57079632679]
+    - [translate, 0, 0, 500]
+";
+        let config = &yaml::YamlLoader::load_from_str(&yaml_sphere).unwrap()[0][0];
+        dbg!(config);
+        let sphere = shape_from_config(&config);
+        let expected = shapes::Shape {
+            material: Material {
+                colour: Colour::new(1.0, 1.0, 1.0),
+                ambient: 1.0,
+                diffuse: 0.0,
+                specular: 0.0,
+                ..Default::default()
+            },
+            transform: Matrix::rotation_x(1.57079632679).translate(0.0, 0.0, 500.0),
+            ..Default::default()
+        };
+        assert_eq!(sphere, expected);
+    }
+
+    #[test]
+    fn reads_in_a_world() {}
+
+        #[test]
+    fn reads_in_a_sphere_with_no_transform() {
+        let yaml_sphere = "
+- add: sphere
+  material:
+    colour: [1,1,1]
+    ambient: 1
+    diffuse: 0
+    specular: 0
+";
+        let config = &yaml::YamlLoader::load_from_str(&yaml_sphere).unwrap()[0][0];
+        dbg!(config);
+        let sphere = shape_from_config(&config);
+        let expected = shapes::Shape {
+            material: Material {
+                colour: Colour::new(1.0, 1.0, 1.0),
+                ambient: 1.0,
+                diffuse: 0.0,
+                specular: 0.0,
+                ..Default::default()
+            },
+            transform: Matrix::identity(),
+            ..Default::default()
+        };
+        assert_eq!(sphere, expected);
     }
 }
