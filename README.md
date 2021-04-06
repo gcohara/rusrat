@@ -47,8 +47,8 @@ This defines a point light source. There can be more than one! It has two proper
 An example of a light:
 ```yaml
 - add: light
-at: [50, 100, -50]
-intensity: [1, 1, 1]
+  at: [50, 100, -50]
+  intensity: [1, 1, 1]
 ```
     
 #### **Sphere:**
@@ -61,18 +61,19 @@ This defines a plane. It has the same two properties as a sphere.
 
 For the shapes, there are two properties requiring further explanation.
 
-##### **Transform:**
+#### **Transform:**
   This is an array of lists that define a sequence of transforms to be applied to the object. The possible transforms are:
   
-  * *Scale:* Scales the object. Since it scales independently in the x, y, and z directions, it can be used to 'stretch' in one direction and shrink it in another.
+* **Scale:** Scales the object. Since it scales independently in the x, y, and z directions, it can be used to 'stretch' in one direction and shrink it in another.
   
-      ` - [scale, magnitude of scaling in x direction, in y direction, in z direction]`
-  * *Rotate-x/y/z:* Rotates the object around the x/y/z axis.
+  ` - [scale, magnitude of scaling in x direction, in y direction, in z direction]`
+* **Rotate-x/y/z:** Rotates the object around the x/y/z axis.
   
-    ` - [rotate-x/y/z, angle of rotation in radians]`
-  * *Translate:* Moves the object around in space.
-    `- [translate, displacement in x direction, in y direction, in z direction]`
-  * *Shear:* Shears the object.
+  ` - [rotate-x/y/z, angle of rotation in radians]`
+* **Translate:** Moves the object around in space.
+
+  `- [translate, displacement in x direction, in y direction, in z direction]`
+* **Shear:** Shears the object.
   
 Transforms should be specified as follows:
 ```yaml
