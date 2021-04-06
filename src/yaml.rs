@@ -33,7 +33,6 @@ pub fn parse_config(config: &yaml::Yaml) -> (World, Camera) {
     // iterate over the structures
     if let Yaml::Array(entities) = config {
         for node in entities {
-            
             if let Yaml::Hash(entity) = node {
                 match entity_kind(entity) {
                     EntityKind::Camera => c = camera_from_config(&node),
@@ -122,6 +121,7 @@ fn parse_transforms(transform_array: &yaml::Yaml) -> Matrix<f64, 4, 4> {
 // should be given a &Yaml::Array, which looks like ["rotate-x", 1]
 
 fn transform_type_and_data(transform: &yaml::Yaml) -> TransformType {
+    dbg!(transform);
     match &transform[0] {
         Yaml::String(s) if s == "rotate-x" => TransformType::RotateX(parse_number(&transform[1])),
         Yaml::String(s) if s == "rotate-y" => TransformType::RotateY(parse_number(&transform[1])),
@@ -137,7 +137,13 @@ fn transform_type_and_data(transform: &yaml::Yaml) -> TransformType {
             parse_number(&transform[3]),
         ),
         Yaml::String(s) => panic!("String {} is not a valid transform", s),
-        _ => unreachable!(),
+        _ => {
+            println!(
+                "Value {:?} is not a valid transform. Please check the yaml file for errors.",
+                &transform[0]
+            );
+            unreachable!()
+        }
     }
 }
 
@@ -247,7 +253,10 @@ fn destructure_yaml_array_into_tuple(array: &yaml::Yaml, kind: TupleKind) -> Tup
             tuple_as_array[i] = match &a[i] {
                 Yaml::Integer(val) => *val as f64,
                 Yaml::Real(val) => val.parse().unwrap(),
-                _ => panic!(),
+                _ => {
+                    println!("Value {:?} is not a valid number!", &a[i]);
+                    panic!()
+                }
             }
         }
         let [x, y, z] = tuple_as_array;
@@ -292,7 +301,6 @@ fn entity_kind(entity: &yaml::Hash) -> EntityKind {
 mod tests {
     use super::*;
     use crate::shapes;
-    use crate::Matrix;
 
     #[test]
     fn reads_in_camera() {
@@ -409,7 +417,7 @@ transform:
     #[test]
     fn reads_in_a_world() {}
 
-        #[test]
+    #[test]
     fn reads_in_a_sphere_with_no_transform() {
         let yaml_sphere = "
 - add: sphere

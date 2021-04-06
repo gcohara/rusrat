@@ -20,8 +20,6 @@ pub fn float_eq(a: f64, b: f64) -> bool {
     (a - b).abs() < EPSILON
 }
 
-// fn parse_yaml() -> World {}
-
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let yaml_file = &args[1];
@@ -101,21 +99,3 @@ fn main() {
     // let canv = world::render(&mut cam, &world);
     // canv.write_out_as_ppm_file();
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn yaml_sphere() {
-//         let yaml = "- add: plane
-//   material:
-//     colour: [1,1,1]
-//     ambient: 1
-//     diffuse: 0
-//     specular: 0
-//   transform:
-//     - [rotate-x, 1.5707]
-//     - [translate, 0, 0, 500]";
-//     }
-// }
