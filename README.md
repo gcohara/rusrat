@@ -8,7 +8,7 @@ Generates images such as this:
 
 Scenes are specified using a YAML file.
 Rusrat can then be called on this scene description:
-```
+```bash
 cargo run my_scene.yaml
 ```
 
@@ -19,7 +19,7 @@ Note that rendering times can be very long for complicated scenes - for instance
 The YAML files consist of a series of elements.
 There are four possible elements:
 
-* **Camera:**
+#### **Camera:**
 This can be thought of as the position of the 'eye' in the scene. It defines the point of view the scene will be rendered from. It has the following properties:
     * **Width:** The width of the output image in pixels.
     * **Height:** The height of the output image in pixels.
@@ -29,7 +29,7 @@ This can be thought of as the position of the 'eye' in the scene. It defines the
     * **Up:** The direction that is 'up' relative to the camera's view.
     
     As an example:
-    ```
+    ```yaml
     - add: camera
       width: 100
       height: 100
@@ -39,38 +39,39 @@ This can be thought of as the position of the 'eye' in the scene. It defines the
       up: [-0.45, 1, 0]
     ```
     
-* **Light:**
+#### **Light:**
 This defines a point light source. There can be more than one! It has two properties:
     * **Intensity:** The colour of the light source in RGB. This is a list of three values, each between 0 and 1 inclusive.
     * **At:** The position of the light.
     
     An example of a light:
-    ```
+    ```yaml
     - add: light
       at: [50, 100, -50]
       intensity: [1, 1, 1]
     ```
     
-* **Sphere:**
+#### **Sphere:**
 Technically, this defines a ball rather than a sphere (a ball is the full 3D object, while a sphere is the 2D surface). It has two properties:
     * **Material:** Properties of the material that the sphere is constructed from. See below for further details.
     * **Transform:** The position, size, shape, and orientation of the sphere within space. See below for further details.
     
-* **Plane:**
+#### **Plane:**
 This defines a plane. It has the same two properties as a sphere.
 
 For the shapes, there are two properties requiring further explanation.
 
-* **Transform:**
+##### **Transform:**
   This is an array of lists that define a sequence of transforms to be applied to the object. The possible transforms are:
   
   * *Scale:* Scales the object. Since it scales independently in the x, y, and z directions, it can be used to 'stretch' in one direction and shrink it in another.
   
-      ` - [scale, magnitude of scaling in x direction, magnitude in y direction, magnitude in z direction]`
+      ` - [scale, magnitude of scaling in x direction, in y direction, in z direction]`
   * *Rotate-x/y/z:* Rotates the object around the x/y/z axis.
   
     ` - [rotate-x/y/z, angle of rotation in radians]`
   * *Translate:* Moves the object around in space.
+    `- [translate, displacement in x direction, in y direction, in z direction]`
   * *Shear:* Shears the object.
   
 Transforms should be specified as follows:
