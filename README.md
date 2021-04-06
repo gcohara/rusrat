@@ -49,7 +49,7 @@ An example of a light:
 - add: light
 at: [50, 100, -50]
 intensity: [1, 1, 1]
-        ```
+```
     
 #### **Sphere:**
 Technically, this defines a ball rather than a sphere (a ball is the full 3D object, while a sphere is the 2D surface). It has two properties:
