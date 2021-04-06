@@ -21,40 +21,40 @@ There are four possible elements:
 
 #### **Camera:**
 This can be thought of as the position of the 'eye' in the scene. It defines the point of view the scene will be rendered from. It has the following properties:
-    * **Width:** The width of the output image in pixels.
-    * **Height:** The height of the output image in pixels.
-    * **Field of View:** The angular extent of what can be seen from the camera - higher values have the appearance of being a fisheye lens. This should not be set below 0 or above 2п (~6.28).
-    * **From:** The position of the camera.
-    * **To:** The direction the camera points.
-    * **Up:** The direction that is 'up' relative to the camera's view.
-    
-    As an example:
-    ```yaml
-    - add: camera
-      width: 100
-      height: 100
-      field-of-view: 0.785
-      from: [-6, 6, -10]
-      to: [6, 0, 6]
-      up: [-0.45, 1, 0]
-    ```
-    
+* **Width:** The width of the output image in pixels.
+* **Height:** The height of the output image in pixels.
+* **Field of View:** The angular extent of what can be seen from the camera - higher values have the appearance of being a fisheye lens. This should not be set below 0 or above 2п (~6.28).
+* **From:** The position of the camera.
+* **To:** The direction the camera points.
+* **Up:** The direction that is 'up' relative to the camera's view.
+
+As an example:
+```yaml
+- add: camera
+  width: 100
+  height: 100
+  field-of-view: 0.785
+  from: [-6, 6, -10]
+  to: [6, 0, 6]
+  up: [-0.45, 1, 0]
+```
+        
 #### **Light:**
 This defines a point light source. There can be more than one! It has two properties:
-    * **Intensity:** The colour of the light source in RGB. This is a list of three values, each between 0 and 1 inclusive.
-    * **At:** The position of the light.
+* **Intensity:** The colour of the light source in RGB. This is a list of three values, each between 0 and 1 inclusive.
+* **At:** The position of the light.
     
-    An example of a light:
-    ```yaml
-    - add: light
-      at: [50, 100, -50]
-      intensity: [1, 1, 1]
-    ```
+An example of a light:
+```yaml
+- add: light
+at: [50, 100, -50]
+intensity: [1, 1, 1]
+        ```
     
 #### **Sphere:**
 Technically, this defines a ball rather than a sphere (a ball is the full 3D object, while a sphere is the 2D surface). It has two properties:
-    * **Material:** Properties of the material that the sphere is constructed from. See below for further details.
-    * **Transform:** The position, size, shape, and orientation of the sphere within space. See below for further details.
+* **Material:** Properties of the material that the sphere is constructed from. See below for further details.
+* **Transform:** The position, size, shape, and orientation of the sphere within space. See below for further details.
     
 #### **Plane:**
 This defines a plane. It has the same two properties as a sphere.
