@@ -62,7 +62,7 @@ This defines a plane. It has the same two properties as a sphere.
 For the shapes, there are two properties requiring further explanation.
 
 ### **Transform:**
-  This is an array of lists that define a sequence of transforms to be applied to the object. The possible transforms are:
+This is an array of lists that define a sequence of transforms to be applied to the object. The possible transforms are:
   
 * **Scale:** Scales the object. Since it scales independently in the x, y, and z directions, it can be used to 'stretch' in one direction and shrink it in another.
   
@@ -86,3 +86,29 @@ transform:
   
 ```
 
+### **Material:**
+Defines properties of a material. The options are:
+
+* **Colour:**
+The colour of the material. Three values between 0 and 1 respectively representing the red, green, and blue components.
+* **Ambient:**
+  The contribution of background lighting to the lighting of the object. This is constant for the whole object, and doesn't depend on the normal to the object. Sensible values are between 0 and 1.
+* **Diffuse:**
+  The amount of diffuse reflection from the surface. Depends on the angle between the incident light and the normal to the surface. Sensible values are between 0 and 1.
+* **Specular:**
+  The intensity of the specular reflection, which is the bright spot that can be seen on glossy surfaces. Sensible values are between 0 and 1.
+* **Shininess:**
+  The size and tightness of the bright spot due to specular reflection. Larger values make the spot smaller. Sensible values are from 10 to 200.
+* **Reflectivity:**
+  How reflective the surface of the object is. Values range from 0 (nonreflective) to 1 (a mirror).
+* **Transparency:**
+  How transparent the object is. Ranges from 0 (opaque) to 1 (completely transparent).
+* **Refractive Index:**
+  Determines how much a ray of light bends when entering the object. Larger numbers mean the light bends more. Some examples of sensible values are 1 for a perfect vacuum, 1.5 for glass, and 2.4 for diamond.
+* **Pattern:**
+  * **Type:**
+    The type of pattern. Possible values are `3d-check` for a checkered pattern, and `stripe` for stripes.
+  * **Colour A:**
+    One colour of the pattern.
+  * **Colour B:**
+    The other colour of the pattern.
