@@ -4,6 +4,11 @@ RUSt(ic|ed|y) RAy Tracer - a recursive ray tracer written in Rust, complete with
 Generates images such as this:
 ![First example image](https://raw.githubusercontent.com/gcohara/rusrat/main/examples/example_1.png)
 
+And this:
+![Second example image](https://raw.githubusercontent.com/gcohara/rusrat/main/examples/ball-in-ball.png)
+
+
+
 ## Usage
 
 Scenes are specified using a YAML file.
