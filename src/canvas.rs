@@ -96,7 +96,7 @@ impl Mul for Colour {
 pub struct Canvas {
     width: usize,
     height: usize,
-    pixels: Vec<Vec<Colour>>,
+    pixels: Vec<Colour>,
 }
 
 impl Canvas {
@@ -104,16 +104,16 @@ impl Canvas {
         Canvas {
             width,
             height,
-            pixels: vec![vec![Colour::new(0.0, 0.0, 0.0); width]; height],
+            pixels: vec![Colour::new(0.0, 0.0, 0.0); width * height],
         }
     }
 
     pub fn pixel_at(&self, x: usize, y: usize) -> &Colour {
-        &self.pixels[y][x]
+        &self.pixels[y * self.width + x]
     }
 
     pub fn write_pixel(&mut self, (x, y): (usize, usize), colour: Colour) {
-        self.pixels[y][x] = colour;
+        self.pixels[y * self.width + x] = colour;
     }
     // Change this to output a result, test it returns correctly
     pub fn write_out_as_ppm_file(&self) {
@@ -129,7 +129,6 @@ impl Canvas {
     fn ppm_pixel_data(&self) -> String {
         self.pixels
             .iter()
-            .flatten()
             .map(|pixel| pixel.to_string())
             .collect()
     }
