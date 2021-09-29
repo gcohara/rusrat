@@ -1,7 +1,7 @@
 use crate::canvas::Colour;
 use crate::lighting::PointLight;
 use crate::matrices::Matrix;
-use crate::shapes::{CheckPattern3D, Material, Pattern, Shape, ShapeType, StripePattern};
+use crate::shapes::{Material, Pattern, Shape, ShapeType};
 use crate::tuple::Tuple;
 use crate::world::{self, Camera, World};
 use yaml_rust::{yaml, Yaml};
@@ -197,52 +197,62 @@ fn parse_material(material: &yaml::Yaml) -> Material {
 // expects to be given a Yaml::Hash, which contains the type of pattern and
 // the relevant colours and transform etc
 
-fn parse_pattern(pattern_map: &yaml::Yaml) -> Box<dyn Pattern> {
+fn parse_pattern(pattern_map: &yaml::Yaml) -> Pattern {
     match &pattern_map["type"] {
-        Yaml::String(s) if s == "3d-check" => Box::new(parse_check_pattern(&pattern_map)),
-        Yaml::String(s) if s == "stripe" => Box::new(parse_stripe_pattern(&pattern_map)),
+        Yaml::String(s) if s == "3d-check" => parse_check_pattern(&pattern_map),
+        Yaml::String(s) if s == "stripe" => parse_stripe_pattern(&pattern_map),
         _ => unreachable!(),
     }
 }
 
-fn parse_check_pattern(pattern_map: &yaml::Yaml) -> CheckPattern3D {
-    let mut out = CheckPattern3D::default();
-    if pattern_map["colour-a"] != Yaml::BadValue {
-        out.colour_a = destructure_yaml_array_into_colour(&pattern_map["colour-a"]);
+fn parse_check_pattern(pattern_map: &yaml::Yaml) -> Pattern {
+    let colour_a = if pattern_map["colour-a"] != Yaml::BadValue {
+        destructure_yaml_array_into_colour(&pattern_map["colour-a"])
     } else if pattern_map["color-a"] != Yaml::BadValue {
-        out.colour_a = destructure_yaml_array_into_colour(&pattern_map["color-a"]);
+        destructure_yaml_array_into_colour(&pattern_map["color-a"])
+    } else {
+        unreachable!();
     };
 
-    if pattern_map["colour-b"] != Yaml::BadValue {
-        out.colour_b = destructure_yaml_array_into_colour(&pattern_map["colour-b"]);
+    let colour_b = if pattern_map["colour-b"] != Yaml::BadValue {
+        destructure_yaml_array_into_colour(&pattern_map["colour-b"])
     } else if pattern_map["color-a"] != Yaml::BadValue {
-        out.colour_b = destructure_yaml_array_into_colour(&pattern_map["color-b"]);
+        destructure_yaml_array_into_colour(&pattern_map["color-b"])
+    } else {
+        unreachable!();
     };
 
-    if pattern_map["transform"] != Yaml::BadValue {
-        out.transform = parse_transforms(&pattern_map["transform"]);
+    let transform = if pattern_map["transform"] != Yaml::BadValue {
+        parse_transforms(&pattern_map["transform"])
+    } else {
+        unreachable!();
     };
-    out
+    Pattern::CheckPattern3D{colour_a, colour_b, transform}
 }
 
-fn parse_stripe_pattern(pattern_map: &yaml::Yaml) -> StripePattern {
-    let mut out = StripePattern::default();
-    if pattern_map["colour-a"] != Yaml::BadValue {
-        out.colour_a = destructure_yaml_array_into_colour(&pattern_map["colour-a"]);
+fn parse_stripe_pattern(pattern_map: &yaml::Yaml) -> Pattern {
+    let colour_a = if pattern_map["colour-a"] != Yaml::BadValue {
+        destructure_yaml_array_into_colour(&pattern_map["colour-a"])
     } else if pattern_map["color-a"] != Yaml::BadValue {
-        out.colour_a = destructure_yaml_array_into_colour(&pattern_map["color-a"]);
+        destructure_yaml_array_into_colour(&pattern_map["color-a"])
+    } else {
+        unreachable!();
     };
 
-    if pattern_map["colour-b"] != Yaml::BadValue {
-        out.colour_b = destructure_yaml_array_into_colour(&pattern_map["colour-b"]);
+    let colour_b = if pattern_map["colour-b"] != Yaml::BadValue {
+        destructure_yaml_array_into_colour(&pattern_map["colour-b"])
     } else if pattern_map["color-a"] != Yaml::BadValue {
-        out.colour_b = destructure_yaml_array_into_colour(&pattern_map["color-b"]);
+        destructure_yaml_array_into_colour(&pattern_map["color-b"])
+    } else {
+        unreachable!();
     };
 
-    if pattern_map["transform"] != Yaml::BadValue {
-        out.transform = parse_transforms(&pattern_map["transform"]);
+    let transform = if pattern_map["transform"] != Yaml::BadValue {
+        parse_transforms(&pattern_map["transform"])
+    } else {
+        unreachable!();
     };
-    out
+    Pattern::StripePattern{colour_a, colour_b, transform}
 }
 
 fn destructure_yaml_array_into_tuple(array: &yaml::Yaml, kind: TupleKind) -> Tuple {

@@ -261,7 +261,7 @@ mod tests {
     use super::*;
     use crate::float_eq;
     use crate::matrices::Matrix;
-    use crate::shapes::{plane, sphere, TestPattern};
+    use crate::shapes::{plane, sphere, Pattern};
 
     #[test]
     fn eye_between_light_and_surface() {
@@ -753,7 +753,7 @@ mod tests {
     fn refracted_colour_with_refracted_ray() {
         let mut w = World::default();
         w.objects[0].material.ambient = 1.0;
-        w.objects[0].material.pattern = Some(Box::new(TestPattern::default()));
+        w.objects[0].material.pattern = Some(Pattern::TestPattern{transform: Matrix::identity()});
         w.objects[1].material.transparency = 1.0;
         w.objects[1].material.refractive_index = 1.5;
         let a = &w.objects[0];
