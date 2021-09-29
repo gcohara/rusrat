@@ -1,0 +1,83 @@
+- add: camera
+  width: 1000
+  height: 1000
+  field-of-view: 0.698
+  from: [-0.0, 3.1, -10.3]
+  to: [0, 1, 0]
+  up: [0, 1, 0]
+
+- add: light
+  at: [-10, 10, -10]
+  intensity: [1, 1, 1]
+
+# floor
+- add: plane
+  material:
+    colour: [0.1,0.1,0.1]
+    reflectivity: 0.3
+    specular: 0
+    pattern:
+      type: 3d-check
+      colour-a: [0.9, 0.9, 0.9]
+      colour-b: [0.2, 0.2, 0.2]
+      transform:
+        - [rotate-y, 0.5236]
+      
+# left wall
+- add: plane
+  material:
+    colour: [0,0,0]
+    ambient: 0.1
+    diffuse: 0.1
+    reflectivity: 0.95
+    specular: 1
+  transform:
+    - [rotate-x, 1.5708]
+    - [rotate-y, -0.7855]
+    - [translate, 0, 0, 5]
+
+# glass sphere with inner sphere
+- add: sphere
+  material:
+    colour: [0.9, 1.0, 1.0]
+    diffuse: 0.0
+    specular: 0.9
+    transparency: 0.9
+    reflectivity: 0.9
+    refractive_index: 1.5
+  transform:
+    - [translate, 0, 3, -8]
+    - [scale, 0.5, 0.5, 0.5]
+- add: sphere
+  material:
+    colour: [1, 1, 1]
+    diffuse: 0
+    ambient: 0
+    specular: 0.9
+    shininess: 300
+    transparency: 0.9
+    reflectivity: 0.9
+    refractive_index: 1.00000034
+  transform:
+    - [translate, 0, 3, -8]
+    - [scale, 0.3, 0.3, 0.3]
+
+# dark red sphere
+- add: sphere
+  material:
+    colour: [0.3, 0.1, 0.1]
+    diffuse: 0.7
+    specular: 0.6
+    transparency: 0
+    reflectivity: 0.1
+    refractive_index: 1.5
+  transform:
+    - [translate, -0.5, 1, -0.5]
+
+# mirror ball
+- add: sphere
+  material:
+    colour: [0.09, 0.09,0.09]
+    reflectivity: 0.9
+  transform:
+    - [translate, 2, 2, 0]
