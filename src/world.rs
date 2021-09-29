@@ -34,35 +34,33 @@ impl Camera {
             half_width: Self::half_width(hsize, vsize, fov),
             half_height: Self::half_height(hsize, vsize, fov),
             pixel_size: Self::pixel_size(hsize, vsize, fov),
-            ..Default::default()
         }
     }
 
     fn half_width(hsize: usize, vsize: usize, fov: f64) -> f64 {
         let half_view = (fov / 2.0).tan();
         let aspect = hsize as f64 / vsize as f64;
-        let half_width = if aspect >= 1.0 {
+
+        if aspect >= 1.0 {
             half_view
         } else {
             half_view * aspect
-        };
-        half_width
+        }
     }
 
     fn half_height(hsize: usize, vsize: usize, fov: f64) -> f64 {
         let half_view = (fov / 2.0).tan();
         let aspect = hsize as f64 / vsize as f64;
-        let half_height = if aspect >= 1.0 {
+
+        if aspect >= 1.0 {
             half_view / aspect
         } else {
             half_view
-        };
-        half_height
+        }
     }
 
     fn pixel_size(hsize: usize, vsize: usize, fov: f64) -> f64 {
-        let ps = Self::half_width(hsize, vsize, fov) * 2.0 / hsize as f64;
-        ps
+        Self::half_width(hsize, vsize, fov) * 2.0 / hsize as f64
     }
 
     pub fn ray_for_pixel(&self, x: usize, y: usize) -> Ray {

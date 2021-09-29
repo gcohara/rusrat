@@ -9,9 +9,8 @@ mod tuple;
 mod world;
 mod yaml;
 
-
-use yaml_rust::YamlLoader;
 use yaml::parse_config;
+use yaml_rust::YamlLoader;
 
 pub const REFLECTION_RECURSION_DEPTH: usize = 7;
 

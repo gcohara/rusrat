@@ -1,7 +1,7 @@
+use serde::Serialize;
 use std::fs::File;
 use std::io::Write;
 use std::ops::{Add, Mul, Sub};
-use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, Default, Serialize)]
 pub struct Colour {
@@ -128,10 +128,7 @@ impl Canvas {
     }
 
     fn ppm_pixel_data(&self) -> String {
-        self.pixels
-            .iter()
-            .map(|pixel| pixel.to_string())
-            .collect()
+        self.pixels.iter().map(|pixel| pixel.to_string()).collect()
     }
 }
 

@@ -34,7 +34,7 @@ impl<'a> Intersection<'a> {
         Intersection { t, object }
     }
 
-    pub fn hit(intersections: &'a Vec<Intersection<'a>>) -> Option<&'a Intersection<'a>> {
+    pub fn hit(intersections: &'a [Intersection<'a>]) -> Option<&'a Intersection<'a>> {
         intersections
             .iter()
             .filter(|x| x.t >= 0.0)
@@ -60,7 +60,7 @@ impl Ray {
     pub fn intersects_world<'a>(&self, w: &'a World) -> Vec<Intersection<'a>> {
         let mut out = Vec::new();
         for shape in w.objects.iter() {
-            out.append(&mut shape.intersects(&self))
+            out.append(&mut shape.intersects(self))
         }
         out.sort_by(|i, j| i.partial_cmp(j).unwrap());
         out

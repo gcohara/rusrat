@@ -2,7 +2,7 @@ use crate::tuple::Tuple;
 use itertools::iproduct;
 use std::ops::{Index, IndexMut, Mul};
 // use serde::{Serialize, Serializer};
-use serde::ser::{Serialize, Serializer, SerializeStruct};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 #[derive(Debug)]
 pub struct Matrix<T, const ROWS: usize, const COLUMNS: usize> {
@@ -11,13 +11,14 @@ pub struct Matrix<T, const ROWS: usize, const COLUMNS: usize> {
 
 impl Serialize for Matrix<f64, 4, 4> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where S: Serializer {
+    where
+        S: Serializer,
+    {
         let mut state = serializer.serialize_struct("Matrix4x4", 3)?;
         state.serialize_field("data", &self.data)?;
         state.end()
     }
 }
-
 
 // Implementations for floating point square matrix types
 impl<const SIZE: usize> Matrix<f64, SIZE, SIZE> {
@@ -25,10 +26,10 @@ impl<const SIZE: usize> Matrix<f64, SIZE, SIZE> {
         Matrix {
             // rows: SIZE,
             // columns: SIZE,
-            data: values.clone(),
+            data: *values,
         }
     }
-    
+
     pub fn new() -> Self {
         Matrix::from_array(&[[f64::default(); SIZE]; SIZE])
     }
@@ -313,7 +314,7 @@ impl<const ROWS: usize, const COLUMNS: usize> PartialEq for Matrix<f64, ROWS, CO
             .flatten()
             .zip(lhs)
             .map(floats_close)
-            .position(|b| b == false)
+            .position(|b| !b)
         {
             None => true,
             Some(_) => false,

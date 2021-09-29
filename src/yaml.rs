@@ -35,10 +35,10 @@ pub fn parse_config(config: &yaml::Yaml) -> (World, Camera) {
         for node in entities {
             if let Yaml::Hash(entity) = node {
                 match entity_kind(entity) {
-                    EntityKind::Camera => c = camera_from_config(&node),
-                    EntityKind::Light => w.lights.push(light_from_config(&node)),
+                    EntityKind::Camera => c = camera_from_config(node),
+                    EntityKind::Light => w.lights.push(light_from_config(node)),
                     EntityKind::Plane | EntityKind::Sphere => {
-                        w.objects.push(shape_from_config(&node))
+                        w.objects.push(shape_from_config(node))
                     }
                 };
             }
@@ -103,7 +103,7 @@ fn parse_transforms(transform_array: &yaml::Yaml) -> Matrix<f64, 4, 4> {
         let mut out = Matrix::identity();
         for transform in ts.iter().rev() {
             out = out
-                * match transform_type_and_data(&transform) {
+                * match transform_type_and_data(transform) {
                     TransformType::RotateX(a) => Matrix::rotation_x(a),
                     TransformType::RotateY(a) => Matrix::rotation_y(a),
                     TransformType::RotateZ(a) => Matrix::rotation_z(a),
@@ -198,8 +198,8 @@ fn parse_material(material: &yaml::Yaml) -> Material {
 
 fn parse_pattern(pattern_map: &yaml::Yaml) -> Pattern {
     match &pattern_map["type"] {
-        Yaml::String(s) if s == "3d-check" => parse_check_pattern(&pattern_map),
-        Yaml::String(s) if s == "stripe" => parse_stripe_pattern(&pattern_map),
+        Yaml::String(s) if s == "3d-check" => parse_check_pattern(pattern_map),
+        Yaml::String(s) if s == "stripe" => parse_stripe_pattern(pattern_map),
         _ => unreachable!(),
     }
 }
@@ -226,7 +226,7 @@ fn parse_check_pattern(pattern_map: &yaml::Yaml) -> Pattern {
     } else {
         unreachable!();
     };
-    Pattern::CheckPattern3D {
+    Pattern::Check3D {
         colour_a,
         colour_b,
         transform,
@@ -255,7 +255,7 @@ fn parse_stripe_pattern(pattern_map: &yaml::Yaml) -> Pattern {
     } else {
         unreachable!();
     };
-    Pattern::StripePattern {
+    Pattern::Stripe {
         colour_a,
         colour_b,
         transform,
@@ -329,8 +329,8 @@ mod tests {
   to: [4, -2, 8]
   up: [1, 1, 0]
 ";
-        let config = &yaml::YamlLoader::load_from_str(&yaml_file).unwrap()[0][0];
-        let cam = camera_from_config(&config);
+        let config = &yaml::YamlLoader::load_from_str(yaml_file).unwrap()[0][0];
+        let cam = camera_from_config(config);
         let expected = world::Camera::new(
             100,
             100,
@@ -352,8 +352,8 @@ mod tests {
   at: [50, 100, -50]
   intensity: [1, 1, 0.2]
 ";
-        let config = &yaml::YamlLoader::load_from_str(&yaml_file).unwrap()[0][0];
-        let light = light_from_config(&config);
+        let config = &yaml::YamlLoader::load_from_str(yaml_file).unwrap()[0][0];
+        let light = light_from_config(config);
         let expected = PointLight::new(
             Colour::new(1.0, 1.0, 0.2),
             Tuple::point_new(50.0, 100.0, -50.0),
@@ -366,8 +366,8 @@ mod tests {
         let yaml_transform = "
 [rotate-x, 0.345]
     ";
-        let config = &yaml::YamlLoader::load_from_str(&yaml_transform).unwrap()[0];
-        let transform = transform_type_and_data(&config);
+        let config = &yaml::YamlLoader::load_from_str(yaml_transform).unwrap()[0];
+        let transform = transform_type_and_data(config);
         assert_eq!(transform, TransformType::RotateX(0.345));
     }
 
@@ -376,8 +376,8 @@ mod tests {
         let yaml_transform = "
 [translate, 0.345, 5, 7.5]
     ";
-        let config = &yaml::YamlLoader::load_from_str(&yaml_transform).unwrap()[0];
-        let transform = transform_type_and_data(&config);
+        let config = &yaml::YamlLoader::load_from_str(yaml_transform).unwrap()[0];
+        let transform = transform_type_and_data(config);
         assert_eq!(transform, TransformType::Translate(0.345, 5.0, 7.5));
     }
 
@@ -389,7 +389,7 @@ transform:
   - [scale, 5, 5, 5]
   - [translate, 10, 5, 7]
 ";
-        let config = &yaml::YamlLoader::load_from_str(&yaml_transforms).unwrap()[0];
+        let config = &yaml::YamlLoader::load_from_str(yaml_transforms).unwrap()[0];
         let transform = parse_transforms(&config["transform"]);
         let expected = Matrix::from_array(&[
             [5.0, 0.0, 0.0, 10.0],
@@ -413,9 +413,9 @@ transform:
     - [ rotate-x, 1.57079632679]
     - [translate, 0, 0, 500]
 ";
-        let config = &yaml::YamlLoader::load_from_str(&yaml_sphere).unwrap()[0][0];
+        let config = &yaml::YamlLoader::load_from_str(yaml_sphere).unwrap()[0][0];
         dbg!(config);
-        let sphere = shape_from_config(&config);
+        let sphere = shape_from_config(config);
         let expected = shapes::Shape {
             material: Material {
                 colour: Colour::new(1.0, 1.0, 1.0),
@@ -443,9 +443,9 @@ transform:
     diffuse: 0
     specular: 0
 ";
-        let config = &yaml::YamlLoader::load_from_str(&yaml_sphere).unwrap()[0][0];
+        let config = &yaml::YamlLoader::load_from_str(yaml_sphere).unwrap()[0][0];
         dbg!(config);
-        let sphere = shape_from_config(&config);
+        let sphere = shape_from_config(config);
         let expected = shapes::Shape {
             material: Material {
                 colour: Colour::new(1.0, 1.0, 1.0),

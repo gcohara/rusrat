@@ -2,13 +2,11 @@ use crate::canvas::Colour;
 use crate::matrices::Matrix;
 use crate::rays::{Intersection, Ray};
 use crate::tuple::Tuple;
-// use std::any::Any;
 
 #[derive(Debug, PartialEq)]
 pub enum ShapeType {
     Sphere,
     Plane,
-    // Cube
 }
 
 #[derive(Debug, PartialEq)]
@@ -19,7 +17,6 @@ pub struct Shape {
 }
 
 #[derive(Debug, PartialEq)]
-// go through and annotate all these attributes
 pub struct Material {
     pub colour: Colour,
     pub ambient: f64,
@@ -34,38 +31,19 @@ pub struct Material {
 
 #[derive(Debug, PartialEq)]
 pub enum Pattern {
-    StripePattern {
+    Stripe {
         colour_a: Colour,
         colour_b: Colour,
         transform: Matrix<f64, 4, 4>,
     },
-    CheckPattern3D {
+    Check3D {
         colour_a: Colour,
         colour_b: Colour,
         transform: Matrix<f64, 4, 4>,
     },
-    TestPattern {
+    Test {
         transform: Matrix<f64, 4, 4>,
     },
-}
-
-// #[derive(Debug, PartialEq)]
-// pub struct StripePattern {
-//     pub colour_a: Colour,
-//     pub colour_b: Colour,
-//     pub transform: Matrix<f64, 4, 4>,
-// }
-
-// #[derive(Debug, PartialEq)]
-// pub struct CheckPattern3D {
-//     pub colour_a: Colour,
-//     pub colour_b: Colour,
-//     pub transform: Matrix<f64, 4, 4>,
-// }
-
-#[derive(Debug, PartialEq, Default)]
-pub struct TestPattern {
-    pub transform: Matrix<f64, 4, 4>,
 }
 
 impl Pattern {
@@ -73,7 +51,7 @@ impl Pattern {
         const EPSILON: f64 = 0.00001;
 
         match self {
-            Pattern::CheckPattern3D {
+            Pattern::Check3D {
                 colour_a, colour_b, ..
             } => {
                 let x = if point.x.abs() < EPSILON {
@@ -97,7 +75,7 @@ impl Pattern {
                     *colour_b
                 }
             }
-            Pattern::StripePattern {
+            Pattern::Stripe {
                 colour_a, colour_b, ..
             } => {
                 if point.x.floor() as i32 % 2 == 0 {
@@ -107,15 +85,15 @@ impl Pattern {
                 }
             }
 
-            Pattern::TestPattern { .. } => Colour::new(point.x, point.y, point.z),
+            Pattern::Test { .. } => Colour::new(point.x, point.y, point.z),
         }
     }
 
     pub fn pattern_at_object(&self, object: &Shape, point: &Tuple) -> Colour {
         match self {
-            Pattern::CheckPattern3D { transform, .. }
-            | Pattern::StripePattern { transform, .. }
-            | Pattern::TestPattern { transform } => {
+            Pattern::Check3D { transform, .. }
+            | Pattern::Stripe { transform, .. }
+            | Pattern::Test { transform } => {
                 let object_space_point = object.transform.inverse() * point;
                 let pattern_point = transform.inverse() * &object_space_point;
                 self.pattern_at(&pattern_point)
@@ -123,51 +101,6 @@ impl Pattern {
         }
     }
 }
-
-// impl Pattern for TestPattern {
-//     fn pattern_at(&self, point: &Tuple) -> Colour {
-//         Colour::new(point.x, point.y, point.z)
-//     }
-
-//     fn pattern_at_object(&self, object: &Shape, point: &Tuple) -> Colour {
-//         let object_space_point = object.transform.inverse() * point;
-//         let pattern_point = self.transform.inverse() * &object_space_point;
-//         self.pattern_at(&pattern_point)
-//     }
-// }
-
-// impl Pattern for StripePattern {
-
-// fn pattern_at(&self, point: &Tuple) -> Colour {
-
-// }
-
-//     fn pattern_at_object(&self, object: &Shape, point: &Tuple) -> Colour {
-//         let object_space_point = object.transform.inverse() * point;
-//         let pattern_point = self.transform.inverse() * &object_space_point;
-//         self.pattern_at(&pattern_point)
-//     }
-// }
-
-// impl Default for StripePattern {
-//     fn default() -> StripePattern {
-//         StripePattern {
-//             colour_a: Colour::white(),
-//             colour_b: Colour::black(),
-//             transform: Matrix::identity(),
-//         }
-//     }
-// }
-
-// impl Default for CheckPattern3D {
-//     fn default() -> CheckPattern3D {
-//         CheckPattern3D {
-//             colour_a: Colour::white(),
-//             colour_b: Colour::black(),
-//             transform: Matrix::identity(),
-//         }
-//     }
-// }
 
 impl Shape {
     pub fn normal_at(&self, point: &Tuple) -> Tuple {
@@ -194,8 +127,7 @@ impl Shape {
 pub mod plane {
     use super::*;
     pub(super) fn normal_at() -> Tuple {
-        let object_normal = Tuple::point_new(0.0, 1.0, 0.0);
-        object_normal
+        Tuple::point_new(0.0, 1.0, 0.0)
     }
 
     pub fn default() -> Shape {
@@ -221,8 +153,7 @@ pub mod plane {
 pub mod sphere {
     use super::*;
     pub(super) fn normal_at(point: &Tuple) -> Tuple {
-        let object_normal = point - &Tuple::point_new(0.0, 0.0, 0.0);
-        object_normal
+        point - &Tuple::point_new(0.0, 0.0, 0.0)
     }
 
     pub fn default() -> Shape {
@@ -404,7 +335,7 @@ mod tests {
     }
     #[test]
     fn stripe_pattern_constant_in_y() {
-        let pat = Pattern::StripePattern {
+        let pat = Pattern::Stripe {
             colour_a: Colour::white(),
             colour_b: Colour::black(),
             transform: Matrix::identity(),
@@ -420,7 +351,7 @@ mod tests {
 
     #[test]
     fn stripe_pattern_constant_in_z() {
-        let pat = Pattern::StripePattern {
+        let pat = Pattern::Stripe {
             colour_a: Colour::black(),
             colour_b: Colour::white(),
             transform: Matrix::identity(),
@@ -435,7 +366,7 @@ mod tests {
 
     #[test]
     fn stripe_pattern_changes_in_x() {
-        let pat = Pattern::StripePattern {
+        let pat = Pattern::Stripe {
             colour_a: Colour::black(),
             colour_b: Colour::white(),
             transform: Matrix::identity(),
@@ -456,7 +387,7 @@ mod tests {
     fn lighting_with_pattern() {
         let s = Shape::default();
         let m = Material {
-            pattern: Some(Pattern::StripePattern {
+            pattern: Some(Pattern::Stripe {
                 colour_a: Colour::white(),
                 colour_b: Colour::black(),
                 transform: Matrix::identity(),
@@ -497,7 +428,7 @@ mod tests {
             transform: Matrix::scaling(2.0, 2.0, 2.0),
             ..sphere::default()
         };
-        let pattern = Pattern::StripePattern {
+        let pattern = Pattern::Stripe {
             colour_a: Colour::white(),
             colour_b: Colour::black(),
             transform: Matrix::identity(),
@@ -511,7 +442,7 @@ mod tests {
         let object = Shape {
             ..sphere::default()
         };
-        let pattern = Pattern::StripePattern {
+        let pattern = Pattern::Stripe {
             colour_a: Colour::white(),
             colour_b: Colour::black(),
             transform: Matrix::scaling(2.0, 2.0, 2.0),
@@ -526,7 +457,7 @@ mod tests {
             transform: Matrix::scaling(2.0, 2.0, 2.0),
             ..sphere::default()
         };
-        let pattern = Pattern::StripePattern {
+        let pattern = Pattern::Stripe {
             colour_a: Colour::white(),
             colour_b: Colour::black(),
             transform: Matrix::translation(0.5, 0.0, 0.0),
@@ -537,7 +468,7 @@ mod tests {
 
     #[test]
     fn checks_repeat_in_x() {
-        let pattern = Pattern::CheckPattern3D {
+        let pattern = Pattern::Check3D {
             colour_a: Colour::white(),
             colour_b: Colour::black(),
             transform: Matrix::identity(),
@@ -558,7 +489,7 @@ mod tests {
 
     #[test]
     fn checks_repeat_in_y() {
-        let pattern = Pattern::CheckPattern3D {
+        let pattern = Pattern::Check3D {
             colour_a: Colour::white(),
             colour_b: Colour::black(),
             transform: Matrix::identity(),
@@ -579,7 +510,7 @@ mod tests {
 
     #[test]
     fn checks_repeat_in_z() {
-        let pattern = Pattern::CheckPattern3D {
+        let pattern = Pattern::Check3D {
             colour_a: Colour::white(),
             colour_b: Colour::black(),
             transform: Matrix::identity(),
@@ -597,12 +528,4 @@ mod tests {
             Colour::black()
         );
     }
-
-    // #[test]
-    // fn serialise_a_shape() {
-    //     let s = Shape::default();
-    //     let yaml = serde_yaml::to_string(&s).unwrap();
-    //     println!("{}", yaml);
-    //     assert!(false);
-    // }
 }
