@@ -224,7 +224,7 @@ fn parse_check_pattern(pattern_map: &yaml::Yaml) -> Pattern {
     let transform = if pattern_map["transform"] != Yaml::BadValue {
         parse_transforms(&pattern_map["transform"])
     } else {
-        unreachable!();
+        Matrix::identity()
     };
     Pattern::Check3D {
         colour_a,
@@ -253,7 +253,7 @@ fn parse_stripe_pattern(pattern_map: &yaml::Yaml) -> Pattern {
     let transform = if pattern_map["transform"] != Yaml::BadValue {
         parse_transforms(&pattern_map["transform"])
     } else {
-        unreachable!();
+        Matrix::identity()
     };
     Pattern::Stripe {
         colour_a,
