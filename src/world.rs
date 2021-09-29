@@ -4,8 +4,8 @@ use crate::matrices::Matrix;
 use crate::rays::Ray;
 use crate::shapes::{sphere, Material, Shape};
 use crate::tuple::Tuple;
-use itertools::iproduct;
 use crate::REFLECTION_RECURSION_DEPTH;
+use itertools::iproduct;
 
 pub struct World {
     pub objects: Vec<Shape>,
@@ -19,9 +19,9 @@ pub struct Camera {
     pub field_of_view: f64,
     pub transform: Matrix<f64, 4, 4>,
     // cache/memoise these values
-    pub pixel_size: Option<f64>,
-    pub half_width: Option<f64>,
-    pub half_height: Option<f64>,
+    pub pixel_size: f64,
+    pub half_width: f64,
+    pub half_height: f64,
 }
 
 impl Camera {
@@ -31,62 +31,45 @@ impl Camera {
             vsize,
             field_of_view: fov,
             transform: t,
-            pixel_size: None,
-            half_width: None,
+            half_width: Self::half_width(hsize, vsize, fov),
+            half_height: Self::half_height(hsize, vsize, fov),
+            pixel_size: Self::pixel_size(hsize, vsize, fov),
             ..Default::default()
         }
     }
 
-    fn half_width(&mut self) -> f64 {
-        match self.half_width {
-            Some(hw) => hw,
-            None => {
-                let half_view = (self.field_of_view / 2.0).tan();
-                let aspect = self.hsize as f64 / self.vsize as f64;
-                let half_width = if aspect >= 1.0 {
-                    half_view
-                } else {
-                    half_view * aspect
-                };
-                self.half_width = Some(half_width);
-                half_width
-            }
-        }
+    fn half_width(hsize: usize, vsize: usize, fov: f64) -> f64 {
+        let half_view = (fov / 2.0).tan();
+        let aspect = hsize as f64 / vsize as f64;
+        let half_width = if aspect >= 1.0 {
+            half_view
+        } else {
+            half_view * aspect
+        };
+        half_width
     }
 
-    fn half_height(&mut self) -> f64 {
-        match self.half_height {
-            Some(hh) => hh,
-            None => {
-                let half_view = (self.field_of_view / 2.0).tan();
-                let aspect = self.hsize as f64 / self.vsize as f64;
-                let half_height = if aspect >= 1.0 {
-                    half_view / aspect
-                } else {
-                    half_view
-                };
-                self.half_height = Some(half_height);
-                half_height
-            }
-        }
+    fn half_height(hsize: usize, vsize: usize, fov: f64) -> f64 {
+        let half_view = (fov / 2.0).tan();
+        let aspect = hsize as f64 / vsize as f64;
+        let half_height = if aspect >= 1.0 {
+            half_view / aspect
+        } else {
+            half_view
+        };
+        half_height
     }
 
-    fn pixel_size(&mut self) -> f64 {
-        match self.pixel_size {
-            Some(ps) => ps,
-            None => {
-                let ps = self.half_width() * 2.0 / self.hsize as f64;
-                self.pixel_size = Some(ps);
-                ps
-            }
-        }
+    fn pixel_size(hsize: usize, vsize: usize, fov: f64) -> f64 {
+        let ps = Self::half_width(hsize, vsize, fov) * 2.0 / hsize as f64;
+        ps
     }
 
-    pub fn ray_for_pixel(&mut self, x: usize, y: usize) -> Ray {
-        let x_offset = (x as f64 + 0.5) * self.pixel_size();
-        let y_offset = (y as f64 + 0.5) * self.pixel_size();
-        let world_x = self.half_width() - x_offset;
-        let world_y = self.half_height() - y_offset;
+    pub fn ray_for_pixel(&self, x: usize, y: usize) -> Ray {
+        let x_offset = (x as f64 + 0.5) * self.pixel_size;
+        let y_offset = (y as f64 + 0.5) * self.pixel_size;
+        let world_x = self.half_width - x_offset;
+        let world_y = self.half_height - y_offset;
         let px = self.transform.inverse() * &Tuple::point_new(world_x, world_y, -1.0);
         let origin = self.transform.inverse() * &Tuple::point_new(0.0, 0.0, 0.0);
         let direction = (px - origin).normalise();
@@ -226,22 +209,22 @@ mod tests {
     #[test]
     fn camera_pixel_size_horizontal() {
         use std::f64::consts::FRAC_PI_2;
-        let mut c = Camera::new(200, 125, FRAC_PI_2, Matrix::identity());
-        assert!(float_close(c.pixel_size(), 0.01));
+        let c = Camera::new(200, 125, FRAC_PI_2, Matrix::identity());
+        assert!(float_close(c.pixel_size, 0.01));
     }
 
     #[test]
     fn camera_pixel_size_vertical() {
         use std::f64::consts::FRAC_PI_2;
-        let mut c = Camera::new(125, 200, FRAC_PI_2, Matrix::identity());
-        assert!(float_close(c.pixel_size(), 0.01));
+        let c = Camera::new(125, 200, FRAC_PI_2, Matrix::identity());
+        assert!(float_close(c.pixel_size, 0.01));
     }
 
     #[test]
     fn ray_through_centre_of_canvas() {
         use std::f64::consts::FRAC_PI_2;
-        let mut c = Camera::new(201, 101, FRAC_PI_2, Matrix::identity());
-        println!("{}", c.pixel_size());
+        let c = Camera::new(201, 101, FRAC_PI_2, Matrix::identity());
+        println!("{}", c.pixel_size);
         let r = c.ray_for_pixel(100, 50);
         assert_eq!(r.origin, Tuple::point_new(0.0, 0.0, 0.0));
         assert_eq!(r.direction, Tuple::vector_new(0.0, 0.0, -1.0));
@@ -250,7 +233,7 @@ mod tests {
     #[test]
     fn ray_through_corner_of_canvas() {
         use std::f64::consts::FRAC_PI_2;
-        let mut c = Camera::new(201, 101, FRAC_PI_2, Matrix::identity());
+        let c = Camera::new(201, 101, FRAC_PI_2, Matrix::identity());
         let r = c.ray_for_pixel(0, 0);
         assert_eq!(r.origin, Tuple::point_new(0.0, 0.0, 0.0));
         assert_eq!(r.direction, Tuple::vector_new(0.66519, 0.33259, -0.66851));
@@ -259,7 +242,7 @@ mod tests {
     #[test]
     fn ray_when_camera_transformed() {
         use std::f64::consts::{FRAC_1_SQRT_2, FRAC_PI_2, FRAC_PI_4};
-        let mut c = Camera::new(
+        let c = Camera::new(
             201,
             101,
             FRAC_PI_2,

@@ -55,13 +55,12 @@ fn camera_from_config(cam_yaml: &yaml::Yaml) -> world::Camera {
         let from = destructure_yaml_array_into_tuple(&cam_yaml["from"], TupleKind::Point);
         let to = destructure_yaml_array_into_tuple(&cam_yaml["to"], TupleKind::Point);
         let up = destructure_yaml_array_into_tuple(&cam_yaml["up"], TupleKind::Vector);
-        world::Camera {
-            hsize: cam_yaml["width"].as_i64().unwrap() as usize,
-            vsize: cam_yaml["height"].as_i64().unwrap() as usize,
-            field_of_view: cam_yaml["field-of-view"].as_f64().unwrap(),
-            transform: world::view_transform(&from, &to, &up),
-            ..Default::default()
-        }
+        world::Camera::new(
+            cam_yaml["width"].as_i64().unwrap() as usize,
+            cam_yaml["height"].as_i64().unwrap() as usize,
+            cam_yaml["field-of-view"].as_f64().unwrap(),
+            world::view_transform(&from, &to, &up),
+        )
     } else {
         unreachable!()
     }
@@ -227,7 +226,11 @@ fn parse_check_pattern(pattern_map: &yaml::Yaml) -> Pattern {
     } else {
         unreachable!();
     };
-    Pattern::CheckPattern3D{colour_a, colour_b, transform}
+    Pattern::CheckPattern3D {
+        colour_a,
+        colour_b,
+        transform,
+    }
 }
 
 fn parse_stripe_pattern(pattern_map: &yaml::Yaml) -> Pattern {
@@ -252,7 +255,11 @@ fn parse_stripe_pattern(pattern_map: &yaml::Yaml) -> Pattern {
     } else {
         unreachable!();
     };
-    Pattern::StripePattern{colour_a, colour_b, transform}
+    Pattern::StripePattern {
+        colour_a,
+        colour_b,
+        transform,
+    }
 }
 
 fn destructure_yaml_array_into_tuple(array: &yaml::Yaml, kind: TupleKind) -> Tuple {
