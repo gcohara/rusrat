@@ -96,6 +96,7 @@ impl Mul for Colour {
 pub struct Canvas {
     width: usize,
     height: usize,
+    // In row major order
     pixels: Vec<Colour>,
 }
 
